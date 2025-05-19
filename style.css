@@ -1,0 +1,10 @@
+/* Remover margens padrão e esconder scroll */
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Garante que o canvas ocupa o ecrã todo */
+canvas {
+  display: block;
+}

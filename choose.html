@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SATRZ - Entrada do Museu</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            font-size: 1.2em;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            pointer-events: none;
+            display: none; /* Escondido inicialmente */
+        }
+        
+        #avatarSelection {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(225, 216, 216, 0.2); /* Transparência aumentada */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #5a4a42; /* Cor do texto ajustada para contraste */
+            z-index: 100;
+        }
+        
+        .avatar-container {
+            background-color: rgba(225, 216, 216, 0.4); /* Fundo semi-transparente */
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        .avatar-options {
+            display: flex;
+            gap: 30px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .avatar-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .avatar-option:hover {
+            transform: scale(1.05);
+            background-color: rgba(90, 74, 66, 0.3);
+        }
+        
+        .avatar-option.selected {
+            background-color: rgba(90, 74, 66, 0.4);
+            border: 2px solid #d7be9e;
+        }
+        
+        .avatar-preview {
+            width: 110px;
+            height: 140px;
+            margin-bottom: 15px;
+        }
+        
+        h2 {
+            margin-bottom: 10px;
+            font-size: 2em;
+            color: #5a4a42;
+        }
+        
+        button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            background-color: #5a4a42;
+            color: #e8d5b5;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        button:hover {
+            background-color: #3a2e2a;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background-color: #b0a6a0;
+            color: #5a4a42;
+            cursor: not-allowed;
+        }
+        
+        p {
+            margin: 5px 0 0;
+            font-weight: bold;
+            color: #5a4a42;
+        }
+    </style>
+</head>
+<body>
+    <div id="Tag3DScene"></div>    
+    <div id="avatarSelection">
+        <div class="avatar-container">
+            <h2>Choose Your Avatar</h2>
+            
+            <div class="avatar-options">
+                <div class="avatar-option" data-avatar="1">
+                    <div class="avatar-preview" id="avatar1"></div>
+                    <p>Explorador</p>
+                </div>
+                <div class="avatar-option" data-avatar="2">
+                    <div class="avatar-preview" id="avatar2"></div>
+                    <p>Estilista</p>
+                </div>
+                <div class="avatar-option" data-avatar="3">
+                    <div class="avatar-preview" id="avatar3"></div>
+                    <p>Historiador</p>
+                </div>
+            </div>
+            
+            <button id="confirmBtn" disabled>Entrar no Museu</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from "three";
+        import { FontLoader } from "three/addons/loaders/FontLoader.js";
+        import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Variáveis globais
+        let selectedAvatar = null;
+        const avatars = [];
+        const sceneElements = {
+            sceneGraph: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            raycaster: new THREE.Raycaster(),
+            mouse: new THREE.Vector2()
+        };
+
+        // Inicializar a cena 3D
+        function init3DScene() {
+            helper.initEmptyScene(sceneElements);
+            scene.load3DObjects(sceneElements.sceneGraph);
+            
+            // Configurar a cena para ficar visível por trás da seleção de avatar
+            sceneElements.renderer.domElement.style.opacity = '1';
+            
+            helper.render(sceneElements);
+        }
+
+        // Criar avatares para seleção
+        function createAvatar(color, containerId) {
+            const container = document.getElementById(containerId);
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            const avatarRenderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                powerPreference: "high-performance"
+            });
+            avatarRenderer.setSize(width, height);
+            avatarRenderer.domElement.style.borderRadius = '8px';
+            container.appendChild(avatarRenderer.domElement);
+            
+            const avatarScene = new THREE.Scene();
+            avatarScene.background = null;
+            const avatarCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+            avatarCamera.position.set(0, 1, 5);
+            
+            // Luzes para os avatares
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            avatarScene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 2, 3);
+            avatarScene.add(directionalLight);
+            
+            // Criar modelo do avatar (boneco 3D)
+            const group = new THREE.Group();
+            
+            // Cabeça
+            const head = new THREE.Mesh(
+                new THREE.SphereGeometry(0.5, 32, 32),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0xF5DEB3,
+                    roughness: 0.3,
+                    metalness: 0.1
+                })
+            );
+            head.position.y = 1.5;
+            group.add(head);
+            
+            // Corpo
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1.5, 0.5),
+                new THREE.MeshStandardMaterial({ 
+                    color: color,
+                    roughness: 0.4,
+                    metalness: 0.2
+                })
+            );
+            body.position.y = 0.75;
+            group.add(body);
+            
+            // Braços
+            const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+            const leftArm = new THREE.Mesh(
+                armGeo, 
+                new THREE.MeshStandardMaterial({ 
+                    color: color,
+                    roughness: 0.4,
+                    metalness: 0.2
+                })
+            );
+            leftArm.position.set(-0.6, 1, 0);
+            group.add(leftArm);
+            
+            const rightArm = leftArm.clone();
+            rightArm.position.set(0.6, 1, 0);
+            group.add(rightArm);
+            
+            // Pernas
+            const legGeo = new THREE.BoxGeometry(0.3, 0.8, 0.3);
+            const leftLeg = new THREE.Mesh(
+                legGeo, 
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x333333,
+                    roughness: 0.5
+                })
+            );
+            leftLeg.position.set(-0.25, -0.4, 0);
+            group.add(leftLeg);
+            
+            const rightLeg = leftLeg.clone();
+            rightLeg.position.set(0.25, -0.4, 0);
+            group.add(rightLeg);
+            
+            avatarScene.add(group);
+            
+            // Animação de rotação
+            function animate() {
+                requestAnimationFrame(animate);
+                group.rotation.y += 0.01;
+                avatarRenderer.render(avatarScene, avatarCamera);
+            }
+            animate();
+            
+            return { group, renderer: avatarRenderer };
+        }
+
+        // Configurar seleção de avatar
+        function setupAvatarSelection() {
+            // Criar os 3 avatares
+            avatars.push(createAvatar(0x3498db, 'avatar1'));  // Azul
+            avatars.push(createAvatar(0xe74c3c, 'avatar2'));  // Vermelho
+            avatars.push(createAvatar(0x2ecc71, 'avatar3'));  // Verde
+            
+            // Seleção de avatar
+            document.querySelectorAll('.avatar-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    // Remover seleção anterior
+                    document.querySelectorAll('.avatar-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    
+                    // Selecionar novo avatar
+                    option.classList.add('selected');
+                    selectedAvatar = option.getAttribute('data-avatar');
+                    document.getElementById('confirmBtn').disabled = false;
+                });
+            });
+            
+              // Botão de confirmação
+              document.getElementById('confirmBtn').addEventListener('click', () => {
+              if (selectedAvatar) {
+                  localStorage.setItem('selectedAvatar', selectedAvatar);
+                  window.location.href = 'museum.html?avatar=' + selectedAvatar;
+              }
+            });
+        }
+
+        const helper = {
+            initEmptyScene: function (sceneElements) {
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x111111);
+                sceneElements.sceneGraph = scene;
+
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+                sceneElements.camera = camera;
+                camera.position.set(0, 4, 30.5); // Mais afastado
+
+                const renderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    powerPreference: "high-performance"
+                });
+                renderer.physicallyCorrectLights = true;
+                renderer.outputEncoding = THREE.sRGBEncoding;
+                renderer.setSize(width, height);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.2;
+                document.querySelector("#Tag3DScene").appendChild(renderer.domElement);
+                sceneElements.renderer = renderer;
+
+                const controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.screenSpacePanning = false;
+                controls.minDistance = 20;
+                controls.maxDistance = 50;
+                controls.maxPolarAngle = Math.PI * 0.5;
+                controls.target.set(0, 5, 10);
+                controls.enabled = false; // Desativar inicialmente
+                sceneElements.controls = controls;
+
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                directionalLight.position.set(5, 20, 10);
+                directionalLight.castShadow = true;
+                scene.add(directionalLight);
+
+                const doorLight = new THREE.SpotLight(0xffffff, 3, 20, Math.PI/6, 0.5);
+                doorLight.position.set(0, 8, 15);
+                doorLight.target.position.set(0, 4, 10);
+                doorLight.castShadow = true;
+                scene.add(doorLight);
+                scene.add(doorLight.target);
+
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                fillLight.position.set(-5, 5, -10);
+                scene.add(fillLight);
+            },
+
+            render: function (sceneElements) {
+                sceneElements.controls.update();
+                sceneElements.renderer.render(sceneElements.sceneGraph, sceneElements.camera);
+                requestAnimationFrame(() => helper.render(sceneElements));
+            }
+        };
+
+        const scene = {
+            load3DObjects: function (sceneGraph) {
+                const fontLoader = new FontLoader();
+                fontLoader.load('Pacifico_Regular.json', function (font) {
+                    const textGeo = new TextGeometry("SATRZ", {
+                        font: font,
+                        size: 1.5,
+                        height: 2,
+                        curveSegments: 10,
+                        bevelEnabled: true,
+                        bevelThickness: 0.0,
+                        bevelSize: 0.05,
+                        bevelOffset: 0,
+                        bevelSegments: 10
+                    });
+
+                    const textMat = new THREE.MeshStandardMaterial({
+                        color: new THREE.Color("#d7be9e"),
+                        metalness: 0.0,
+                        roughness: 0.6
+                    });
+
+                    textGeo.computeBoundingBox();
+                    const textWidth = textGeo.boundingBox.max.x - textGeo.boundingBox.min.x;
+                    const centerOffset = -0.5 * textWidth;
+
+                    const textMesh = new THREE.Mesh(textGeo, textMat);
+                    textMesh.position.set(centerOffset, 10.5, 9.76);
+                    textMesh.castShadow = false;
+                    sceneGraph.add(textMesh);
+                });
+
+                const wallTexture = new THREE.TextureLoader().load('stone-shells-fossil-texture.jpg');
+                wallTexture.wrapS = THREE.RepeatWrapping;
+                wallTexture.wrapT = THREE.RepeatWrapping;
+                wallTexture.repeat.set(4, 4);
+
+                const wallMaterial = new THREE.MeshStandardMaterial({
+                    map: wallTexture,
+                    roughness: 0.0,
+                    metalness: 0.0
+                });
+
+                const fachada = new THREE.Mesh(
+                    new THREE.BoxGeometry(35, 15, 0.5),
+                    wallMaterial
+                );
+                fachada.position.set(0, 6, 10);
+                fachada.receiveShadow = true;
+                sceneGraph.add(fachada);
+
+                const sideWallMaterial = new THREE.MeshStandardMaterial({
+                    map: wallTexture,
+                    roughness: 0.7,
+                    metalness: 0.1,
+                    side: THREE.DoubleSide
+                });
+
+                const leftWall = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 15, 60),
+                    sideWallMaterial
+                );
+                leftWall.position.set(-17.5, 6, 0);
+                leftWall.receiveShadow = true;
+                sceneGraph.add(leftWall);
+
+                const rightWall = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 15, 60),
+                    sideWallMaterial
+                );
+                rightWall.position.set(17.5, 6, 0);
+                rightWall.receiveShadow = true;
+                sceneGraph.add(rightWall);
+
+                const backWall = new THREE.Mesh(
+                    new THREE.BoxGeometry(35, 15, 0.5),
+                    sideWallMaterial
+                );
+                backWall.position.set(0, 6, -30);
+                backWall.receiveShadow = true;
+                sceneGraph.add(backWall);
+
+                const interiorPreview = this.createInteriorPreview();
+                interiorPreview.position.set(0, 4, 8);
+                sceneGraph.add(interiorPreview);
+
+                const floorTexture = new THREE.TextureLoader().load('stone-texture.jpg');
+                floorTexture.wrapS = THREE.RepeatWrapping;
+                floorTexture.wrapT = THREE.RepeatWrapping;
+                floorTexture.repeat.set(8, 8);
+                
+                const floorMaterial = new THREE.MeshStandardMaterial({
+                    map: floorTexture,
+                    roughness: 0.7,
+                    metalness: 0.1
+                });
+                
+                const floor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(35, 60),
+                    floorMaterial
+                );
+                floor.rotation.x = -Math.PI / 2;
+                floor.receiveShadow = true;
+                sceneGraph.add(floor);
+            },
+            
+            createInteriorPreview: function() {
+                const previewGroup = new THREE.Group();
+                
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+                previewGroup.add(ambientLight);
+                
+                const spotLight = new THREE.SpotLight(0xffffff, 3, 15, Math.PI/4, 0.5);
+                spotLight.position.set(0, 8, -5);
+                spotLight.castShadow = true;
+                previewGroup.add(spotLight);
+                previewGroup.add(spotLight.target);
+
+                const hangerMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xcccccc,
+                    metalness: 0.9,
+                    roughness: 0.1
+                });
+
+                const clothingMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x555555,
+                    roughness: 0.5
+                });
+
+                const positions = [
+                    { x: -4, z: -3 },
+                    { x: 0, z: -4 },
+                    { x: 4, z: -3 }
+                ];
+
+                positions.forEach(pos => {
+                    const hanger = new THREE.Mesh(
+                        new THREE.TorusGeometry(0.5, 0.05, 16, 32),
+                        hangerMaterial
+                    );
+                    hanger.rotation.z = Math.PI/2;
+                    hanger.position.set(pos.x, 5.5, pos.z);
+                    
+                    const clothing = new THREE.Mesh(
+                        new THREE.PlaneGeometry(1.2, 2),
+                        clothingMaterial
+                    );
+                    clothing.rotation.y = Math.PI;
+                    clothing.position.set(pos.x, 4.5, pos.z - 0.1);
+                    
+                    previewGroup.add(hanger);
+                    previewGroup.add(clothing);
+                });
+                return previewGroup;
+            }
+        };
+
+        function onMouseClick(event) {
+            // Só funciona depois de selecionar o avatar
+            if (!selectedAvatar) return;
+            
+            sceneElements.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            sceneElements.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            sceneElements.raycaster.setFromCamera(sceneElements.mouse, sceneElements.camera);
+            
+            const intersects = sceneElements.raycaster.intersectObjects(scene.entranceGroup.children, true);
+            
+            if (intersects.length > 0) {
+                intersects[0].object.material.color.setHex(0xaaaaaa);
+                setTimeout(() => {
+                    intersects[0].object.material.color.setHex(0xffffff);
+                    window.location.href = 'museum.html?avatar=' + selectedAvatar;
+                }, 200);
+            }
+        }
+
+        window.addEventListener('click', onMouseClick, false);
+
+        window.addEventListener("resize", () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            sceneElements.camera.aspect = width / height;
+            sceneElements.camera.updateProjectionMatrix();
+            sceneElements.renderer.setSize(width, height);
+            
+            // Atualizar tamanho dos avatares
+            avatars.forEach((avatar, index) => {
+                const container = document.getElementById(`avatar${index + 1}`);
+                if (container) {
+                    const width = container.clientWidth;
+                    const height = container.clientHeight;
+                    avatar.renderer.setSize(width, height);
+                    avatar.camera.aspect = width / height;
+                    avatar.camera.updateProjectionMatrix();
+                }
+            });
+        });
+
+        // Inicialização
+        init3DScene();
+        setupAvatarSelection();
+    </script>
+</body>
+</html>
