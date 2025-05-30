@@ -50,10 +50,10 @@
             gap: 10px;
             z-index: 10;
         }
-        #wallSelector button {
+        /* Estilo base para todos os botões do wallSelector */
+        .wall-btn {
             padding: 8px 12px;
             border: 1px solid white;
-            background-color: rgba(0, 0, 0, 0.7);
             color: white;
             font-family: Arial, sans-serif;
             border-radius: 5px;
@@ -62,9 +62,34 @@
             box-shadow: none;
             transition: background-color 0.3s ease;
         }
-        #wallSelector button:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+
+        /* Cores específicas */
+        .wall-btn.blue {
+            background-color: #a2c5f5;
+            border-color: #a2c5f5;
+            
         }
+        .wall-btn.blue:hover {
+            background-color: #b8d4f9;
+        }
+        .wall-btn.pink {
+            background-color: #f5c4cb;
+            border-color: #f5c4cb;
+            color: #906749;
+            border: 1px solid #906749;
+        }
+        .wall-btn.pink:hover {
+            background-color: #f7d4da;
+        }
+        .wall-btn.green {
+            background-color: #b3e6c9;
+            border-color: #b3e6c9;
+            color: black;
+        }
+        .wall-btn.green:hover {
+            background-color: #c6edd6;
+        }
+
     </style>
 </head>
 <body>
@@ -72,17 +97,15 @@
     <div id="info">Museu Virtual de Moda • Use o mouse para navegar</div>
     <button id="zoomOutBtn">Voltar à vista geral</button>
     <div id="wallSelector">
-        <button onclick="goToWall('blue')">Serenidade</button>
-        <button onclick="goToWall('red')">Fúria Criativa</button>
-        <button onclick="goToWall('green')">Ressurgir</button>
+        <button class="wall-btn blue" onclick="goToWall('blue')">Serenidade</button>
+        <button class="wall-btn pink" onclick="goToWall('pink')">Balance</button>
+        <button class="wall-btn green" onclick="goToWall('green')">Ressurgir</button>
     </div>
-
     <script type="module">
         import * as THREE from "three";
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import TWEEN from 'https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.5.0/dist/tween.esm.js';
 
-        
         // Obter o avatar selecionado da URL
         const urlParams = new URLSearchParams(window.location.search);
         const selectedAvatar = urlParams.get('avatar') || '1'; // Default para avatar 1 se não especificado
@@ -115,7 +138,7 @@
                 renderer.setSize(width, height);
                 renderer.shadowMap.enabled = true;
                 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-                renderer.outputEncoding = THREE.sRGBEncoding;
+                renderer.outputColorSpace = THREE.SRGBColorSpace;
                 renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 renderer.toneMappingExposure = 1.0;
                 document.querySelector("#Tag3DScene").appendChild(renderer.domElement);
@@ -126,12 +149,12 @@
                 controls.dampingFactor = 0.1;
                 controls.minDistance = 5;
                 controls.maxDistance = 200;
-                controls.maxPolarAngle = Math.PI * 0.9;
+                controls.maxPolarAngle = Math.PI * 0.5; // 90 graus 
                 controls.screenSpacePanning = true;
                 sceneElements.controls = controls;
 
                 // ILUMINAÇÃO FIXA E ESTÁVEL
-                const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+                const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
                 scene.add(ambientLight);
 
                 
@@ -189,47 +212,61 @@
                 function onDoubleClick(event) {
                     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
                     mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
-                    
+
                     raycaster.setFromCamera(mouse, sceneElements.camera);
-                    
+
                     const intersects = raycaster.intersectObjects(
                         sceneElements.sceneGraph.children.filter(obj => 
                             obj.userData && obj.userData.isDisplay
                         )
                     );
-                    
+
                     if (intersects.length > 0) {
                         const mockup = intersects[0].object;
                         const frameWidth = 6;
-                        
+
                         const zoomDistance = frameWidth * 1.5;
-                        
-                        const direction = new THREE.Vector3()
-                            .subVectors(mockup.position, sceneElements.camera.position)
-                            .normalize();
-                        
+
+                        // 1. Obter direção frontal do mockup (no sistema local)
+                        // Vamos assumir que a frente está no eixo Z negativo local (ajuste se necessário)
+                        const frontDir = new THREE.Vector3(0, 0, -1);
+                        frontDir.applyQuaternion(mockup.quaternion).normalize();
+
+                        // 2. Posição da câmera: afastada na direção oposta da frente do mockup
                         const zoomPosition = new THREE.Vector3()
                             .copy(mockup.position)
-                            .addScaledVector(direction, -zoomDistance);
-                        
-                        zoomPosition.y = mockup.position.y;
-                        
+                            .addScaledVector(frontDir, -zoomDistance);
+
+                        // Manter a altura da câmera alinhada com o mockup, ou ajustar conforme desejar
+                        zoomPosition.y = mockup.position.y + 0.5; // ajuste altura para melhor visão
+
+                        // 3. Alvo da câmera será o centro do mockup
+                        const targetPosition = mockup.position.clone();
+
+                        // 4. Calcular rotação para câmera olhar de frente para o mockup
+                        const directionToMockup = new THREE.Vector3()
+                            .subVectors(targetPosition, zoomPosition)
+                            .normalize();
+
                         const targetRotation = new THREE.Quaternion()
                             .setFromUnitVectors(
-                                new THREE.Vector3(0, 0, 1),
-                                new THREE.Vector3().copy(direction).negate()
+                                new THREE.Vector3(0, 0, 1),  // vetor "para frente" da câmera padrão
+                                directionToMockup
                             );
-                        
+
+                        // Tween para a posição da câmera
                         new TWEEN.Tween(sceneElements.camera.position)
                             .to(zoomPosition, 1000)
                             .easing(TWEEN.Easing.Quadratic.Out)
                             .start();
-                        
+
+                        // Tween para o target do controle
                         new TWEEN.Tween(sceneElements.controls.target)
-                            .to(mockup.position, 1000)
+                            .to(targetPosition, 1000)
                             .easing(TWEEN.Easing.Quadratic.Out)
                             .start();
-                        
+
+                        // Tween para rotação da câmera
                         new TWEEN.Tween({
                             x: sceneElements.camera.quaternion.x,
                             y: sceneElements.camera.quaternion.y,
@@ -249,62 +286,60 @@
                             );
                         })
                         .start();
-                        
+
                         document.getElementById('zoomOutBtn').style.display = 'block';
                     }
                 }
+
                 
                 window.addEventListener('dblclick', onDoubleClick);
                 
-                document.getElementById('zoomOutBtn').addEventListener('click', function() {
+                document.getElementById('zoomOutBtn').addEventListener('click', function () {
+                    const camPosition = sceneElements.originalCameraPosition;
+                    const camTarget = sceneElements.originalControlsTarget;
+                    const avatarPosition = sceneElements.originalAvatarPosition;
+                    const avatarRotationY = sceneElements.originalAvatarRotationY;
+
+                    // Anima a câmara de volta
                     new TWEEN.Tween(sceneElements.camera.position)
-                        .to(sceneElements.originalCameraPosition, 1000)
+                        .to({ x: camPosition.x, y: camPosition.y, z: camPosition.z }, 1000)
                         .easing(TWEEN.Easing.Quadratic.Out)
                         .start();
-                    
+
                     new TWEEN.Tween(sceneElements.controls.target)
-                        .to(sceneElements.originalControlsTarget, 1000)
+                        .to({ x: camTarget.x, y: camTarget.y, z: camTarget.z }, 1000)
                         .easing(TWEEN.Easing.Quadratic.Out)
                         .start();
-                    
-                    const originalRotation = new THREE.Quaternion()
-                        .setFromEuler(sceneElements.camera.rotation);
-                    
-                    new TWEEN.Tween({
-                        x: sceneElements.camera.quaternion.x,
-                        y: sceneElements.camera.quaternion.y,
-                        z: sceneElements.camera.quaternion.z,
-                        w: sceneElements.camera.quaternion.w
-                    })
-                    .to({
-                        x: originalRotation.x,
-                        y: originalRotation.y,
-                        z: originalRotation.z,
-                        w: originalRotation.w
-                    }, 1000)
-                    .easing(TWEEN.Easing.Quadratic.Out)
-                    .onUpdate(function() {
-                        sceneElements.camera.quaternion.set(
-                            this.x, this.y, this.z, this.w
-                        );
-                    })
-                    .start();
-                    
+
+                    // Anima o avatar de volta
+                    if (sceneElements.avatar) {
+                        new TWEEN.Tween(sceneElements.avatar.position)
+                            .to({ x: avatarPosition.x, y: avatarPosition.y, z: avatarPosition.z }, 1000)
+                            .easing(TWEEN.Easing.Quadratic.Out)
+                            .start();
+
+                        new TWEEN.Tween(sceneElements.avatar.rotation)
+                            .to({ y: avatarRotationY }, 1000)
+                            .easing(TWEEN.Easing.Quadratic.Out)
+                            .start();
+                    }
+
+                    // Opcional: ocultar botão após zoom out
                     setTimeout(() => {
                         document.getElementById('zoomOutBtn').style.display = 'none';
                     }, 1000);
                 });
+
             }
         };
 
         const scene = {
+
             load3DObjects: function (sceneGraph) {
+
                 const textureLoader = new THREE.TextureLoader();
                 
                 const wallTexture = textureLoader.load('stone-shells-fossil-texture.jpg');
-                wallTexture.wrapS = THREE.RepeatWrapping;
-                wallTexture.wrapT = THREE.RepeatWrapping;
-                wallTexture.repeat.set(4, 4);
 
                 const wallMaterial = new THREE.MeshStandardMaterial({
                     map: wallTexture,
@@ -317,7 +352,6 @@
                     roughness: 0.2,
                     metalness: 0.1,
                     transparent: true,                    
-                    thickness: 0.5
                 });
 
                 const roomWidth = 50;
@@ -363,23 +397,17 @@
                 const wallSideWidth = (roomWidth - doorWidth) / 2;
 
                // Substitua a parte da parede frontal por este código:
-                const frontWallTexture = textureLoader.load('teto.png', (texture) => {
-                    texture.wrapS = THREE.ClampToEdgeWrapping;
-                    texture.wrapT = THREE.ClampToEdgeWrapping;
+                const frontWallTexture = textureLoader.load('stone-shells-fossil-texture.jpg', (texture) => {
+                    // Use as mesmas configurações das outras paredes
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(2, 2); // Mesmo repeat das outras paredes
                     
-                    // Ajuste para melhor qualidade da textura
-                    texture.minFilter = THREE.LinearFilter;
-                    texture.magFilter = THREE.LinearFilter;
-                    texture.encoding = THREE.sRGBEncoding;
-                    
-                    // Criar a parede frontal como um único plano
                     const frontWallMaterial = new THREE.MeshStandardMaterial({
                         map: texture,
-                        side: THREE.DoubleSide,
-                        roughness: 0.7,
-                        metalness: 0.1,
-                        transparent: true,
-                        alphaTest: 0.5
+                        roughness: 0.0,
+                        metalness: 0.0,
+                        side: THREE.DoubleSide
                     });
 
                     const frontWall = new THREE.Mesh(
@@ -391,7 +419,6 @@
                     frontWall.position.set(0, wallHeight/2, roomDepth/2);
                     frontWall.rotation.y = Math.PI; // Girar para ficar virada para dentro
                     
-                    // Adicionar a porta por cima (usando a mesma abordagem anterior)
                     const doorMaterial = new THREE.MeshStandardMaterial({
                         color: new THREE.Color ("#f5e1ce"),
                         roughness: 0.4,
@@ -408,93 +435,108 @@
                     // Adicionar ambos à cena
                     sceneGraph.add(frontWall);
                     sceneGraph.add(door);
-                    
-                    // Ajustar coordenadas UV para cortar a textura corretamente
-                    frontWall.geometry.computeBoundingBox();
-                    const boundingBox = frontWall.geometry.boundingBox;
-                    const uvAttribute = frontWall.geometry.attributes.uv;
-                    
-                    for (let i = 0; i < uvAttribute.count; i++) {
-                        const u = uvAttribute.getX(i);
-                        const v = uvAttribute.getY(i);
-                        
-                        // Ajustar as coordenadas UV para esticar a textura corretamente
-                        uvAttribute.setXY(i, u, v * 0.8); // Ajuste o 0.8 conforme necessário
-                    }
-                    uvAttribute.needsUpdate = true;
                 });
 
-                // BANCO CENTRAL MODERNO
-                const createModernBench = () => {
-                    const benchGroup = new THREE.Group();
-                    
-                    const woodMaterial = new THREE.MeshStandardMaterial({
-                        color: new THREE.Color("#e8d5b5"),
-                        roughness: 0.5,
-                        metalness: 0.2
-                    });
-                    
-                    const metalMaterial = new THREE.MeshStandardMaterial({
-                        color: 0xFFD700,
-                        metalness: 0.8,
-                        roughness: 0.3
-                    });
+                // Bancos laterais
+                const bench1 = this.createModernBench(-15, 0.0, Math.PI/2); // Esquerdo
+                const bench12 = this.createModernBench(-15, -15, Math.PI/2); // Esquerdo
+                const bench13 = this.createModernBench(-15, 15, Math.PI/2); // Esquerdo
 
-                    const length = 30;
-                    const width = 1;
-                    const height = 0.7;
-                    const legHeight = 1.5;
+                const bench2 = this.createModernBench(15, 0.0, -Math.PI/2); // Direito
+                const bench21 = this.createModernBench(15, -15, -Math.PI/2); // Direito
+                const bench22 = this.createModernBench(15, 15, -Math.PI/2); // Direito
 
-                    const seat = new THREE.Mesh(
-                        new THREE.BoxGeometry(length, height, width),
-                        woodMaterial
-                    );
-                    seat.position.y = legHeight + height/2;
-                    seat.castShadow = true;
-                    benchGroup.add(seat);
+                // Banco central virado para trás
+                const bench3 = this.createModernBench(6.5, -30, Math.PI); 
+                const bench31 = this.createModernBench(-6.5, -30, Math.PI);
 
-                    const legGeometry = new THREE.BoxGeometry(0.1, legHeight, 0.1);
-                    const legPositions = [
-                        { x: -length/2 + 0.5, z: -width/2 + 0.1 },
-                        { x: length/2 - 0.5, z: -width/2 + 0.1 },
-                        { x: -length/2 + 0.5, z: width/2 - 0.1 },
-                        { x: length/2 - 0.5, z: width/2 - 0.1 }
-                    ];
-                    
-                    legPositions.forEach(pos => {
-                        const leg = new THREE.Mesh(legGeometry, metalMaterial);
-                        leg.position.set(pos.x, legHeight/2, pos.z);
-                        benchGroup.add(leg);
-                    });
-
-                    const sideBar = new THREE.Mesh(
-                        new THREE.CylinderGeometry(0.03, 0.03, length - 1, 8),
-                        metalMaterial
-                    );
-                    sideBar.position.set(0, legHeight + 0.02, -width/2 + 0.15);
-                    sideBar.rotation.z = Math.PI/2;
-                    benchGroup.add(sideBar);
-
-                    benchGroup.position.set(0, 0, 0);
-                    benchGroup.rotation.y = Math.PI/2;
-
-                    return benchGroup;
-                };
-
-                const modernBench = createModernBench();
-                sceneGraph.add(modernBench);
+                sceneGraph.add(bench1);
+                sceneGraph.add(bench12);
+                sceneGraph.add(bench13);
+                sceneGraph.add(bench2);
+                sceneGraph.add(bench21);
+                sceneGraph.add(bench22);
+                sceneGraph.add(bench3);
+                sceneGraph.add(bench31);
 
                 // adicionamos o avatar
                 this.addAvatar(sceneGraph, selectedAvatar);
             
                 // TETO PLANO COM IMAGEM
-                this.addFlatCeilingWithLights(sceneGraph, roomWidth, roomDepth, wallHeight);
+                this.addVaultedCeiling(sceneGraph, roomWidth, roomDepth, wallHeight);
 
                 // Quadros para mockups
                 this.addPlaceholderFrames(sceneGraph, roomWidth, roomDepth, wallHeight);
 
                 // Colunas do museu
                 this.addMuseumColumns(sceneGraph, roomWidth, roomDepth, wallHeight);
+            },
+
+            // BANCO CENTRAL MODERNO
+                createModernBench: function(positionX, positionZ, rotationY = Math.PI/2) {
+                const benchGroup = new THREE.Group();
+                
+                const textureLoader = new THREE.TextureLoader();
+
+                // Textura de madeira para o assento
+                const woodTexture = textureLoader.load('Wood092_1K_Color.jpg', (texture) => {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(9, 1); // Ajuste conforme necessário
+                });
+
+                const woodMaterial = new THREE.MeshStandardMaterial({
+                    map: woodTexture,
+                    roughness: 0.6,
+                    metalness: 0.1,
+                    side: THREE.DoubleSide
+                });
+                
+                const metalMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xFFD700,
+                    metalness: 0.8,
+                    roughness: 0.3
+                });
+
+                const length = 10; // Reduzi o comprimento para caber melhor no espaço
+                const width = 1;
+                const height = 0.7;
+                const legHeight = 1.5;
+
+                const seat = new THREE.Mesh(
+                    new THREE.BoxGeometry(length, height, width),
+                    woodMaterial
+                );
+                seat.position.y = legHeight + height/2;
+                seat.castShadow = true;
+                benchGroup.add(seat);
+
+                const legGeometry = new THREE.BoxGeometry(0.1, legHeight, 0.1);
+                const legPositions = [
+                    { x: -length/2 + 0.5, z: -width/2 + 0.1 },
+                    { x: length/2 - 0.5, z: -width/2 + 0.1 },
+                    { x: -length/2 + 0.5, z: width/2 - 0.1 },
+                    { x: length/2 - 0.5, z: width/2 - 0.1 }
+                ];
+                
+                legPositions.forEach(pos => {
+                    const leg = new THREE.Mesh(legGeometry, metalMaterial);
+                    leg.position.set(pos.x, legHeight/2, pos.z);
+                    benchGroup.add(leg);
+                });
+
+                const sideBar = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.03, 0.03, length - 1, 8),
+                    metalMaterial
+                );
+                sideBar.position.set(0, legHeight + 0.02, -width/2 + 0.15);
+                sideBar.rotation.z = Math.PI/2;
+                benchGroup.add(sideBar);
+
+                benchGroup.position.set(positionX, 0, positionZ);
+                benchGroup.rotation.y = rotationY;
+
+                return benchGroup;
             },
 
             // Função para adicionar o avatar ao museu
@@ -573,46 +615,38 @@
                 
                 sceneGraph.add(avatarGroup);
                 sceneElements.avatar = avatarGroup; // Guardamos referência
+                sceneElements.originalAvatarPosition = avatarGroup.position.clone();
+                sceneElements.originalAvatarRotationY = avatarGroup.rotation.y;
             },
 
-            // Função para animar o avatar (opcional)
-            animateAvatar: function() {
-                if (!sceneElements.avatar) return;
+
+
+
+            addVaultedCeiling: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
+                const textureLoader = new THREE.TextureLoader();
                 
-                let movingForward = true;
-                const speed = 0.05;
-                const maxZ = 15;
-                const minZ = 25;
-                
-                function move() {
-                    requestAnimationFrame(move);
-                    
-                    if (movingForward) {
-                        sceneElements.avatar.position.z -= speed;
-                        if (sceneElements.avatar.position.z <= maxZ) {
-                            movingForward = false;
-                        }
-                    } else {
-                        sceneElements.avatar.position.z += speed;
-                        if (sceneElements.avatar.position.z >= minZ) {
-                            movingForward = true;
-                        }
-                    }
-                    
-                    // Pequena animação de caminhada
-                    sceneElements.avatar.rotation.y += 0.01;
-                }
-                
-                move();
-            }, 
+                // Carrega apenas a textura do logo
+                textureLoader.load('Logo.jpg', (texture) => {
+                    const ceilingMaterial = new THREE.MeshStandardMaterial({
+                        map: texture,
+                        side: THREE.DoubleSide
+                    });
+
+                    const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
+                    const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+                    ceiling.rotation.x = Math.PI / 2;
+                    ceiling.position.y = wallHeight;
+                    sceneGraph.add(ceiling);
+                });
+            },
 
             addPlaceholderFrames: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
                 const goldFrameMaterial = new THREE.MeshStandardMaterial({
                     color: 0xFFD700,
-                    metalness: 0.9,
-                    roughness: 0.3,
-                    emissive: 0x222200,
-                    emissiveIntensity: 0.2
+                    metalness: 1.0,
+                    roughness: 0.2,
+                    emissive: 0x886600, // mais vibrante
+                    emissiveIntensity: 0.5
                 });
 
                 const frameWidth = 6;
@@ -622,104 +656,152 @@
 
                 const mockupImages = [
                     'mockup1.png',
+                    'mockup2.png',
+                    'mockup3.png',
+                    'mockup4.png',
+                    'mockup5.png'
                 ];
 
                 const framePositions = [
-                    { x: -20, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0 },
-                    { x: -10, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0 },
-                    { x: 0, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0 },
-                    { x: 10, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0 },
-                    { x: 20, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0 },
-                    
-                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: -20, rotY: Math.PI/2 },
-                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: -7, rotY: Math.PI/2 },
-                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: 7, rotY: Math.PI/2 },
-                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: 20, rotY: Math.PI/2 },
-                    
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -20, rotY: -Math.PI/2 },
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -7, rotY: -Math.PI/2 },
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 7, rotY: -Math.PI/2 },
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 20, rotY: -Math.PI/2 }
+                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: -20, rotY: Math.PI/2, mockupIndex: 1 },
+                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: -7,  rotY: Math.PI/2, mockupIndex: 2 },
+                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: 7,   rotY: Math.PI/2, mockupIndex: 3 },
+                    { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: 20,  rotY: Math.PI/2, mockupIndex: 4 },
+
+                    { x: -20, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
+                    { x: -10, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
+                    { x: 0,   y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
+                    { x: 10,  y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
+                    { x: 20,  y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
+
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -20, rotY: -Math.PI/2, mockupIndex: 0 },
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -7,  rotY: -Math.PI/2, mockupIndex: 0 },
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 7,   rotY: -Math.PI/2, mockupIndex: 0 },
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 20,  rotY: -Math.PI/2, mockupIndex: 0 }
                 ];
 
                 const textureLoader = new THREE.TextureLoader();
-                
-                framePositions.forEach((pos, index) => {
+
+                framePositions.forEach((pos) => {
                     const frameGroup = new THREE.Group();
-                    
+
+                    // Criar moldura
                     const front = new THREE.Mesh(
                         new THREE.BoxGeometry(frameWidth, frameHeight, frameDepth/3),
                         goldFrameMaterial
                     );
                     front.position.z = frameDepth/3;
                     frameGroup.add(front);
-                    
+
                     const sideDepth = frameDepth * 0.7;
+
                     const left = new THREE.Mesh(
                         new THREE.BoxGeometry(frameDepth/2, frameHeight, sideDepth),
                         goldFrameMaterial
                     );
                     left.position.set(-frameWidth/2 + frameDepth/4, 0, sideDepth/2);
                     frameGroup.add(left);
-                    
+
                     const right = left.clone();
                     right.position.set(frameWidth/2 - frameDepth/4, 0, sideDepth/2);
                     frameGroup.add(right);
-                    
+
                     const top = new THREE.Mesh(
                         new THREE.BoxGeometry(frameWidth + frameDepth/2, frameDepth/2, sideDepth),
                         goldFrameMaterial
                     );
                     top.position.set(0, frameHeight/2 - frameDepth/4, sideDepth/2);
                     frameGroup.add(top);
-                    
+
                     const bottom = top.clone();
                     bottom.position.set(0, -frameHeight/2 + frameDepth/4, sideDepth/2);
                     frameGroup.add(bottom);
-                    
+
+                    // Posicionar grupo
                     frameGroup.position.set(pos.x, pos.y, pos.z);
                     frameGroup.rotation.y = pos.rotY;
                     sceneGraph.add(frameGroup);
 
-                    const imageIndex = index % mockupImages.length;
-                    const imageUrl = mockupImages[imageIndex];
-                    
-                    textureLoader.load(imageUrl, (texture) => {
-                        texture.encoding = THREE.sRGBEncoding;
-                        
-                        const mockupMaterial = new THREE.MeshStandardMaterial({
-                            map: texture,
-                            roughness: 0.5,
-                            metalness: 0.0,
-                            side: THREE.DoubleSide,
-                            transparent: true,
-                            alphaTest: 0.5
-                        });
+                    const imageUrl = mockupImages[pos.mockupIndex];
 
-                        const mockup = new THREE.Mesh(
-                            new THREE.PlaneGeometry(frameWidth*0.9, frameHeight*0.9),
-                            mockupMaterial
-                        );
-                        mockup.position.copy(frameGroup.position);
-                        mockup.position.z += pos.rotY === 0 ? frameDepth/2 + 0.02 : 
-                                         (pos.rotY === Math.PI/2 ? -frameDepth/2 - 0.02 : frameDepth/2 + 0.02);
-                        mockup.rotation.y = pos.rotY;
-                        mockup.userData.isDisplay = true;
-                        sceneGraph.add(mockup);
-                    }, undefined, (error) => {
-                        console.error('Erro ao carregar textura:', error);
-                    });
+                    textureLoader.load(
+                        imageUrl,
+                        (texture) => {
+                            texture.colorSpace = THREE.SRGBColorSpace;
+
+                            const mockupMaterial = new THREE.MeshStandardMaterial({
+                                map: texture,
+                                roughness: 0.3,
+                                metalness: 0.0,
+                                side: THREE.DoubleSide,
+                                emissive: 0x000000, // sem brilho
+                                emissiveIntensity: 0.0,
+                                toneMapped: false // mantêm as cores vivas
+                            });
+
+                            if (pos.rotY === Math.PI/2) {
+                                mockupMaterial.color = new THREE.Color(1.8, 1.8, 1.8); // muito claro, mais que branco
+                                mockupMaterial.emissive = new THREE.Color(0xaaaaaa);   // um brilho cinza claro
+                                mockupMaterial.emissiveIntensity = 0.2;                // intensificar brilho
+                            }
+                            const mockup = new THREE.Mesh(
+                                new THREE.PlaneGeometry(frameWidth * 0.9, frameHeight * 0.9),
+                                mockupMaterial
+                            );
+
+                            // Posicionar mockup um pouco na frente da moldura
+                            mockup.position.copy(frameGroup.position);
+                            const forward = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(0, pos.rotY, 0));
+                            mockup.position.add(forward.multiplyScalar(frameDepth / 2 + 0.05));
+                            mockup.rotation.y = pos.rotY;
+
+                            mockup.userData.isDisplay = true;
+                            sceneGraph.add(mockup);
+                        },
+                        undefined,
+                        (error) => {
+                            console.error('Erro ao carregar textura:', imageUrl, error);
+
+                            const fallbackMockup = new THREE.Mesh(
+                                new THREE.PlaneGeometry(frameWidth * 0.9, frameHeight * 0.9),
+                                new THREE.MeshStandardMaterial({
+                                    color: 0xff00ff,
+                                    side: THREE.DoubleSide
+                                })
+                            );
+
+                            fallbackMockup.position.copy(frameGroup.position);
+                            const forward = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(0, pos.rotY, 0));
+                            fallbackMockup.position.add(forward.multiplyScalar(frameDepth / 2 + 0.05));
+                            fallbackMockup.rotation.y = pos.rotY;
+
+                            sceneGraph.add(fallbackMockup);
+                        }
+                    );
                 });
             },
 
+
             addMuseumColumns: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
+                const textureLoader = new THREE.TextureLoader();
+    
+                // Textura de mármore com alta qualidade
+                const marbleTexture = textureLoader.load('transferir (16).jpg', (texture) => {
+                    texture.encoding = THREE.sRGBEncoding;
+                    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(10, wallHeight/3); // Ajuste para a altura da coluna
+                    texture.minFilter = THREE.LinearMipmapLinearFilter;
+                });
+                
                 const columnMaterial = new THREE.MeshStandardMaterial({
                     color: new THREE.Color("#e8d5b5"),
                     roughness: 0.5,
                     metalness: 0.2
                 });
                 
-                const columnGeometry = new THREE.CylinderGeometry(0.8, 0.8, wallHeight, 8);
+                const columnGeometry = new THREE.CylinderGeometry(0.8, 0.8, wallHeight, 32);
                 
                 const columns = [
                     { x: -roomWidth/3, z: -roomDepth/3 },
@@ -734,31 +816,6 @@
                     sceneGraph.add(column);
                 });
             },
-
-            addFlatCeilingWithLights: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
-                const textureLoader = new THREE.TextureLoader();
-                
-                const ceilingTexture = textureLoader.load('teto.png', undefined, undefined, 
-                    (error) => console.error('Erro ao carregar textura:', error));
-                
-                const ceilingMaterial = new THREE.MeshStandardMaterial({
-                    map: ceilingTexture,
-                    side: THREE.DoubleSide,
-                    roughness: 0.7,
-                    metalness: 0.1,
-                    color: new THREE.Color(0.7, 0.7, 0.7)
-                });
-
-                const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-                
-                const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
-                ceiling.rotation.x = Math.PI/2;
-                ceiling.position.y = wallHeight;
-                ceiling.receiveShadow = true;
-                
-                sceneGraph.add(ceiling);
-            }
-
         };
 
             function goToWall(color) {
@@ -770,8 +827,8 @@
                     avatarPosition = new THREE.Vector3(0, 1.5, -35);
                     avatarRotationY = 0;
                     break;
-                case 'red':
-                    camPosition = new THREE.Vector3(20, 7, 0);
+                case 'pink':
+                    camPosition = new THREE.Vector3(6, 7, 0);
                     camTarget = new THREE.Vector3(0, 7, 0);
                     avatarPosition = new THREE.Vector3(-22, 0, 0);
                     avatarRotationY = Math.PI / 2;
@@ -781,6 +838,12 @@
                     camTarget = new THREE.Vector3(70, 7, 0);
                     avatarPosition = new THREE.Vector3(22, 0, 0);
                     avatarRotationY = -Math.PI / 2;
+                    break;
+                case 'zoomOutBtn':
+                    camPosition = sceneElements.originalCameraPosition;
+                    camTarget = sceneElements.originalControlsTarget;
+                    avatarPosition = new THREE.Vector3(0, 1.5, 20);
+                    avatarRotationY = Math.PI / 2; // Posição padrão do avatar
                     break;
             }
 
@@ -814,32 +877,54 @@
         window.addEventListener("keydown", (event) => {
             if (!sceneElements.avatar) return;
 
-            const speed = 0.5;
+            const speed = 0.3;
             const avatar = sceneElements.avatar;
 
-            let moved = false;
+            let direction = new THREE.Vector3();
+
             switch (event.key) {
                 case "ArrowUp":
-                    avatar.position.z -= speed;
-                    moved = true;
+                    direction.z = -1;
+                    avatar.rotation.y = 0;
                     break;
                 case "ArrowDown":
-                    avatar.position.z += speed;
-                    moved = true;
+                    direction.z = 1;
+                    avatar.rotation.y = Math.PI;
                     break;
                 case "ArrowLeft":
-                    avatar.position.x -= speed;
+                    direction.x = -1;
                     avatar.rotation.y = Math.PI / 2;
-                    moved = true;
                     break;
                 case "ArrowRight":
-                    avatar.position.x += speed;
+                    direction.x = 1;
                     avatar.rotation.y = -Math.PI / 2;
-                    moved = true;
                     break;
+                default:
+                    return;
             }
 
-            if (moved) animateWalkCycle();
+            direction.normalize();
+            avatar.position.addScaledVector(direction, speed);
+
+            animateWalkCycle(); // Se quiser animar os braços/pernas
+
+            function updateCameraFollow() {
+                const avatar = sceneElements.avatar;
+                const camera = sceneElements.camera;
+                const controls = sceneElements.controls;
+
+                if (!avatar || !camera || !controls) return;
+
+                const cameraOffset = new THREE.Vector3(0, 5, -10); // vista ligeiramente elevada e atrás
+            }
+            function animate() {
+                requestAnimationFrame(animate);
+                TWEEN.update();
+                updateCameraFollow();
+                sceneElements.controls.update();
+                sceneElements.renderer.render(sceneElements.sceneGraph, sceneElements.camera);
+            }
+            animate();
         });
 
         function animateWalkCycle() {
@@ -868,11 +953,13 @@
             scene.load3DObjects(sceneElements.sceneGraph);
             helper.setupDoubleClickZoom(sceneElements);
             helper.render(sceneElements);
+            helper.setupAvatarMovement(sceneElements);
         }
 
         window.addEventListener("resize", () => {
             const width = window.innerWidth;
             const height = window.innerHeight;
+            sceneElements.avatar.rotation.y = Math.PI / 2; // se ele estava virado para o lado
             sceneElements.camera.aspect = width / height;
             sceneElements.camera.updateProjectionMatrix();
             sceneElements.renderer.setSize(width, height);

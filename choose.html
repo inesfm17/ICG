@@ -140,7 +140,7 @@
                 </div>
                 <div class="avatar-option" data-avatar="2">
                     <div class="avatar-preview" id="avatar2"></div>
-                    <p>Estilista</p>
+                    <p>Balance</p>
                 </div>
                 <div class="avatar-option" data-avatar="3">
                     <div class="avatar-preview" id="avatar3"></div>
@@ -186,7 +186,7 @@
             const container = document.getElementById(containerId);
             const width = container.clientWidth;
             const height = container.clientHeight;
-            
+
             const avatarRenderer = new THREE.WebGLRenderer({ 
                 antialias: true, 
                 alpha: true,
@@ -212,26 +212,18 @@
             // Criar modelo do avatar (boneco 3D)
             const group = new THREE.Group();
             
-            // Cabeça
+            // Cabeça maior
             const head = new THREE.Mesh(
-                new THREE.SphereGeometry(0.5, 32, 32),
-                new THREE.MeshStandardMaterial({ 
-                    color: 0xF5DEB3,
-                    roughness: 0.3,
-                    metalness: 0.1
-                })
+            new THREE.SphereGeometry(0.7, 32, 32),
+            new THREE.MeshLambertMaterial({ color: 0xF5C4CB }) // rosa claro matte
             );
-            head.position.y = 1.5;
+            head.position.y = 1.7;
             group.add(head);
             
             // Corpo
             const body = new THREE.Mesh(
                 new THREE.BoxGeometry(1, 1.5, 0.5),
-                new THREE.MeshStandardMaterial({ 
-                    color: color,
-                    roughness: 0.4,
-                    metalness: 0.2
-                })
+                new THREE.MeshBasicMaterial({ color: color })
             );
             body.position.y = 0.75;
             group.add(body);
@@ -240,11 +232,7 @@
             const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
             const leftArm = new THREE.Mesh(
                 armGeo, 
-                new THREE.MeshStandardMaterial({ 
-                    color: color,
-                    roughness: 0.4,
-                    metalness: 0.2
-                })
+                new THREE.MeshBasicMaterial({ color: color })
             );
             leftArm.position.set(-0.6, 1, 0);
             group.add(leftArm);
@@ -270,6 +258,7 @@
             group.add(rightLeg);
             
             avatarScene.add(group);
+
             
             // Animação de rotação
             function animate() {
@@ -286,7 +275,7 @@
         function setupAvatarSelection() {
             // Criar os 3 avatares
             avatars.push(createAvatar(0x3498db, 'avatar1'));  // Azul
-            avatars.push(createAvatar(0xe74c3c, 'avatar2'));  // Vermelho
+            avatars.push(createAvatar(0xf5c4cb, 'avatar2'));  // rosa
             avatars.push(createAvatar(0x2ecc71, 'avatar3'));  // Verde
             
             // Seleção de avatar
