@@ -157,6 +157,7 @@
         import { FontLoader } from "three/addons/loaders/FontLoader.js";
         import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
         // Variáveis globais
         let selectedAvatar = null;
@@ -181,8 +182,8 @@
             helper.render(sceneElements);
         }
 
-        // Criar avatares para seleção
-        function createAvatar(color, containerId) {
+        // Criar avatares para seleção - agora com modelos .glb
+        function createAvatar(glbUrl, containerId) {
             const container = document.getElementById(containerId);
             const width = container.clientWidth;
             const height = container.clientHeight;
@@ -199,7 +200,7 @@
             const avatarScene = new THREE.Scene();
             avatarScene.background = null;
             const avatarCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-            avatarCamera.position.set(0, 1, 5);
+            avatarCamera.position.set(0, -0.4, 6); // Ajustado para visualização
             
             // Luzes para os avatares
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -209,57 +210,18 @@
             directionalLight.position.set(1, 2, 3);
             avatarScene.add(directionalLight);
             
-            // Criar modelo do avatar (boneco 3D)
+            // Carregar modelo .glb
+            const loader = new GLTFLoader();
             const group = new THREE.Group();
-            
-            // Cabeça maior
-            const head = new THREE.Mesh(
-            new THREE.SphereGeometry(0.7, 32, 32),
-            new THREE.MeshLambertMaterial({ color: 0xF5C4CB }) // rosa claro matte
-            );
-            head.position.y = 1.7;
-            group.add(head);
-            
-            // Corpo
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 1.5, 0.5),
-                new THREE.MeshBasicMaterial({ color: color })
-            );
-            body.position.y = 0.75;
-            group.add(body);
-            
-            // Braços
-            const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
-            const leftArm = new THREE.Mesh(
-                armGeo, 
-                new THREE.MeshBasicMaterial({ color: color })
-            );
-            leftArm.position.set(-0.6, 1, 0);
-            group.add(leftArm);
-            
-            const rightArm = leftArm.clone();
-            rightArm.position.set(0.6, 1, 0);
-            group.add(rightArm);
-            
-            // Pernas
-            const legGeo = new THREE.BoxGeometry(0.3, 0.8, 0.3);
-            const leftLeg = new THREE.Mesh(
-                legGeo, 
-                new THREE.MeshStandardMaterial({ 
-                    color: 0x333333,
-                    roughness: 0.5
-                })
-            );
-            leftLeg.position.set(-0.25, -0.4, 0);
-            group.add(leftLeg);
-            
-            const rightLeg = leftLeg.clone();
-            rightLeg.position.set(0.25, -0.4, 0);
-            group.add(rightLeg);
-            
+            loader.load(glbUrl, (gltf) => {
+                const model = gltf.scene;
+
+                model.position.set(0, 0, 0);
+                model.scale.set(0.7, 0.7, 0.7);
+                group.add(model);
+            });
             avatarScene.add(group);
 
-            
             // Animação de rotação
             function animate() {
                 requestAnimationFrame(animate);
@@ -268,15 +230,15 @@
             }
             animate();
             
-            return { group, renderer: avatarRenderer };
+            return { group, renderer: avatarRenderer, camera: avatarCamera };
         }
 
         // Configurar seleção de avatar
         function setupAvatarSelection() {
-            // Criar os 3 avatares
-            avatars.push(createAvatar(0x3498db, 'avatar1'));  // Azul
-            avatars.push(createAvatar(0xf5c4cb, 'avatar2'));  // rosa
-            avatars.push(createAvatar(0x2ecc71, 'avatar3'));  // Verde
+            // URLs dos modelos .glb - substitua pelos seus URLs corretos dos modelos
+            avatars.push(createAvatar('avatares/avatarBalance/scene.gltf', 'avatar1'));  // Explorador
+            avatars.push(createAvatar('avatares/avatarBalance/scene.gltf', 'avatar2'));    // Balance
+            avatars.push(createAvatar('avatares/avatarBalance/scene.gltf', 'avatar3')); // Historiador
             
             // Seleção de avatar
             document.querySelectorAll('.avatar-option').forEach(option => {
@@ -293,8 +255,8 @@
                 });
             });
             
-              // Botão de confirmação
-              document.getElementById('confirmBtn').addEventListener('click', () => {
+            // Botão de confirmação
+            document.getElementById('confirmBtn').addEventListener('click', () => {
               if (selectedAvatar) {
                   localStorage.setItem('selectedAvatar', selectedAvatar);
                   window.location.href = 'museum.html?avatar=' + selectedAvatar;
@@ -357,6 +319,14 @@
                 const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
                 fillLight.position.set(-5, 5, -10);
                 scene.add(fillLight);
+
+                window.addEventListener('resize', () => {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+                });
             },
 
             render: function (sceneElements) {
