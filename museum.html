@@ -105,6 +105,7 @@
         import * as THREE from "three";
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import TWEEN from 'https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.5.0/dist/tween.esm.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
         // Obter o avatar selecionado da URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -129,7 +130,7 @@
                 const height = window.innerHeight;
                 const camera = new THREE.PerspectiveCamera(80, width / height, 1, 100);
                 sceneElements.camera = camera;
-                camera.position.set(5, 10, 30);
+                camera.position.set(0.5, 8.5, 30);
                 
                 sceneElements.originalCameraPosition = camera.position.clone();
                 sceneElements.originalControlsTarget = new THREE.Vector3(0, 0, 0);
@@ -539,88 +540,54 @@
                 return benchGroup;
             },
 
-            // Função para adicionar o avatar ao museu
+
             addAvatar: function(sceneGraph, avatarType) {
-                const avatarGroup = new THREE.Group();
-                
-                // Cores baseadas no tipo de avatar (igual ao index.html)
-                let color;
-                switch(avatarType) {
-                    case '1': color = 0x3498db; break; // Azul - Explorador
-                    case '2': color = 0xe74c3c; break; // Vermelho - Estilista
-                    case '3': color = 0x2ecc71; break; // Verde - Historiador
-                    default: color = 0x3498db;  // Default azul
+                // Se já existe um avatar na cena, removemos antes
+                if (sceneElements.avatar) {
+                    sceneGraph.remove(sceneElements.avatar);
+                    sceneElements.avatar = null;
                 }
 
-                // Cabeça
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.5, 32, 32),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xF5DEB3,
-                        roughness: 0.3,
-                        metalness: 0.1
-                    })
-                );
-                head.position.y = 1.5;
-                avatarGroup.add(head);
-                
-                // Corpo
-                const body = new THREE.Mesh(
-                    new THREE.BoxGeometry(1, 1.5, 0.5),
-                    new THREE.MeshStandardMaterial({ 
-                        color: color,
-                        roughness: 0.4,
-                        metalness: 0.2
-                    })
-                );
-                body.position.y = 0.75;
-                avatarGroup.add(body);
-                
-                // Braços
-                const armGeo = new THREE.BoxGeometry(0.2, 0.8, 0.2);
-                const leftArm = new THREE.Mesh(
-                    armGeo, 
-                    new THREE.MeshStandardMaterial({ 
-                        color: color,
-                        roughness: 0.4,
-                        metalness: 0.2
-                    })
-                );
-                leftArm.position.set(-0.6, 1, 0);
-                avatarGroup.add(leftArm);
-                
-                const rightArm = leftArm.clone();
-                rightArm.position.set(0.6, 1, 0);
-                avatarGroup.add(rightArm);
-                
-                // Pernas
-                const legGeo = new THREE.BoxGeometry(0.3, 0.8, 0.3);
-                const leftLeg = new THREE.Mesh(
-                    legGeo, 
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x333333,
-                        roughness: 0.5
-                    })
-                );
-                leftLeg.position.set(-0.25, -0.4, 0);
-                avatarGroup.add(leftLeg);
-                
-                const rightLeg = leftLeg.clone();
-                rightLeg.position.set(0.25, -0.4, 0);
-                avatarGroup.add(rightLeg);
-                
-                // Posicionar o avatar no museu (perto da entrada)
-                avatarGroup.position.set(0, 1.5, 20);
-                avatarGroup.scale.set(2.5,2.5,2.5); // Um pouco maior
-                
-                sceneGraph.add(avatarGroup);
-                sceneElements.avatar = avatarGroup; // Guardamos referência
-                sceneElements.originalAvatarPosition = avatarGroup.position.clone();
-                sceneElements.originalAvatarRotationY = avatarGroup.rotation.y;
+                const loader = new GLTFLoader();
+
+                // Mapear avatarType para URLs dos arquivos gltf dos avatares
+                let avatarURL;
+                switch (avatarType) {
+                    case '1':
+                        avatarURL = 'avatares/avatarBalance/scene.gltf';  // substitua pelo caminho real
+                        break;
+                    case '2':
+                        avatarURL = 'avatares/avatarBalance/scene.gltf';
+                        break;
+                    case '3':
+                        avatarURL = 'avatares/avatarBalance/scene.gltf';
+                        break;
+                }
+
+                loader.load(avatarURL, (gltf) => {
+                    const avatarModel = gltf.scene;
+
+                    // Ajustar escala, posição e rotação para o padrão
+                    avatarModel.scale.set(1.0, 1.0, 1.0);
+                    avatarModel.position.set(0, 5, 22);
+                    avatarModel.rotation.y = Math.PI ; // Posição padrão do avatar
+
+                    // Adicionar o modelo na cena
+                    sceneGraph.add(avatarModel);
+
+                    // Guardar referência global para manipular depois (movimento, animação)
+                    sceneElements.avatar = avatarModel;
+                    sceneElements.originalAvatarPosition = avatarModel.position.clone();
+                    sceneElements.originalAvatarRotationY = avatarModel.rotation.y;
+
+                    // Se você quiser, pode disparar uma função aqui para ativar animações do GLTF
+                    // ex: mixer e actions para animação, caso seu gltf tenha animações
+                },
+                undefined,
+                (error) => {
+                    console.error('Erro ao carregar o avatar GLTF:', error);
+                });
             },
-
-
-
 
             addVaultedCeiling: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
                 const textureLoader = new THREE.TextureLoader();
@@ -824,8 +791,8 @@
                 case 'blue':
                     camPosition = new THREE.Vector3(0, 7, -5);
                     camTarget = new THREE.Vector3(0, 10, -40);
-                    avatarPosition = new THREE.Vector3(0, 1.5, -35);
-                    avatarRotationY = 0;
+                    avatarPosition = new THREE.Vector3(0, 1.5, -28);  // y=1.5 para o avatar ficar no chão
+                    avatarRotationY = Math.PI;  // 180 em radianos
                     break;
                 case 'pink':
                     camPosition = new THREE.Vector3(6, 7, 0);
@@ -859,7 +826,7 @@
 
             if (sceneElements.avatar) {
                 new TWEEN.Tween(sceneElements.avatar.position)
-                    .to({ x: avatarPosition.x, y: 0, z: avatarPosition.z }, 1000)
+                    .to({ x: avatarPosition.x, y: avatarPosition, z: avatarPosition.z }, 1000)
                     .easing(TWEEN.Easing.Quadratic.Out)
                     .start();
 
@@ -885,19 +852,19 @@
             switch (event.key) {
                 case "ArrowUp":
                     direction.z = -1;
-                    avatar.rotation.y = 0;
+                    avatar.rotation.y = Math.PI;
                     break;
                 case "ArrowDown":
                     direction.z = 1;
-                    avatar.rotation.y = Math.PI;
+                    avatar.rotation.y = 0;
                     break;
                 case "ArrowLeft":
                     direction.x = -1;
-                    avatar.rotation.y = Math.PI / 2;
+                    avatar.rotation.y = -Math.PI / 2;
                     break;
                 case "ArrowRight":
                     direction.x = 1;
-                    avatar.rotation.y = -Math.PI / 2;
+                    avatar.rotation.y = Math.PI / 2;
                     break;
                 default:
                     return;
@@ -905,8 +872,6 @@
 
             direction.normalize();
             avatar.position.addScaledVector(direction, speed);
-
-            animateWalkCycle(); // Se quiser animar os braços/pernas
 
             function updateCameraFollow() {
                 const avatar = sceneElements.avatar;
@@ -926,27 +891,6 @@
             }
             animate();
         });
-
-        function animateWalkCycle() {
-            const avatar = sceneElements.avatar;
-            if (!avatar) return;
-
-            const leftArm = avatar.children.find(c => c.position.x < 0 && c.geometry.parameters.height === 0.8);
-            const rightArm = avatar.children.find(c => c.position.x > 0 && c.geometry.parameters.height === 0.8);
-            const leftLeg = avatar.children.find(c => c.position.x < 0 && c.geometry.parameters.height === 0.8 && c.position.y < 0);
-            const rightLeg = avatar.children.find(c => c.position.x > 0 && c.geometry.parameters.height === 0.8 && c.position.y < 0);
-
-            [leftArm, rightArm, leftLeg, rightLeg].forEach(limb => {
-                if (!limb) return;
-                const initialRot = { x: limb.rotation.x };
-                new TWEEN.Tween(initialRot)
-                    .to({ x: 0.5 }, 100)
-                    .yoyo(true)
-                    .repeat(1)
-                    .onUpdate(() => { limb.rotation.x = initialRot.x; })
-                    .start();
-            });
-        }
 
         function init() {
             helper.initEmptyScene(sceneElements);
