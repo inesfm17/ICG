@@ -199,6 +199,21 @@
                 const centerLight = new THREE.PointLight(0xfff7e6, 20, 20);
                 centerLight.position.set(0, 10, 0);
                 scene.add(centerLight);
+
+                // Luz esquerda lateral (parede esquerda)
+                const leftWallLight = new THREE.DirectionalLight(0xfff7e6, 0.8);
+                leftWallLight.position.set(-15, 10, 0);
+                leftWallLight.target.position.set(-10, 5, 0);
+                scene.add(leftWallLight);
+                scene.add(leftWallLight.target);
+
+                // Luz direita lateral (parede direita)
+                const rightWallLight = new THREE.DirectionalLight(0xfff7e6, 0.8);
+                rightWallLight.position.set(15, 10, 0);
+                rightWallLight.target.position.set(10, 5, 0);
+                scene.add(rightWallLight);
+                scene.add(rightWallLight.target);
+
             },
 
             render: function (sceneElements) {
@@ -342,7 +357,7 @@
 
                 const textureLoader = new THREE.TextureLoader();
                 
-                const wallTexture = textureLoader.load('stone-shells-fossil-texture.jpg');
+                const wallTexture = textureLoader.load('stone-texture.jpg');
 
                 const wallMaterial = new THREE.MeshStandardMaterial({
                     map: wallTexture,
@@ -350,13 +365,13 @@
                     metalness: 0.0
                 });
 
-                const floorMaterial = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color ("#f5e1ce"),
-                    roughness: 0.2,
-                    metalness: 0.1,
-                    transparent: true,                    
-                });
+                const floorTexture = textureLoader.load('stone-texture.jpg');
 
+                const floorMaterial = new THREE.MeshStandardMaterial({
+                    map: floorTexture,
+                    roughness: 0.5,
+                    metalness: 0.0
+                });
                 const roomWidth = 50;
                 const roomDepth = 80;
                 const wallHeight = 15;
@@ -400,7 +415,7 @@
                 const wallSideWidth = (roomWidth - doorWidth) / 2;
 
                // Substitua a parte da parede frontal por este código:
-                const frontWallTexture = textureLoader.load('stone-shells-fossil-texture.jpg', (texture) => {
+                const frontWallTexture = textureLoader.load('stone-texture.jpg', (texture) => {
                     // Use as mesmas configurações das outras paredes
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
@@ -408,9 +423,8 @@
                     
                     const frontWallMaterial = new THREE.MeshStandardMaterial({
                         map: texture,
-                        roughness: 0.0,
-                        metalness: 0.0,
-                        side: THREE.DoubleSide
+                        roughness: 0.5,
+                        metalness: 0.0
                     });
 
                     const frontWall = new THREE.Mesh(
@@ -422,6 +436,11 @@
                     frontWall.position.set(0, wallHeight/2, roomDepth/2);
                     frontWall.rotation.y = Math.PI; // Girar para ficar virada para dentro
                     
+                    const doorTexture = textureLoader.load('wood-texture.jpg', (texture) => {
+                        texture.wrapS = THREE.RepeatWrapping;
+                        texture.wrapT = THREE.RepeatWrapping;
+                        texture.repeat.set(1, 1); // Ajuste conforme necessário
+                    });
                     const doorMaterial = new THREE.MeshStandardMaterial({
                         color: new THREE.Color ("#f5e1ce"),
                         roughness: 0.0,
@@ -441,13 +460,13 @@
                 });
 
                 // Bancos laterais
-                const bench1 = this.createModernBench(-15, 0.0, Math.PI/2); // Esquerdo
-                const bench12 = this.createModernBench(-15, -15, Math.PI/2); // Esquerdo
-                const bench13 = this.createModernBench(-15, 15, Math.PI/2); // Esquerdo
+                const bench1 = this.createModernBench(-13, -15, Math.PI/2); // Esquerdo
+                const bench12 = this.createModernBench(-13, 0, Math.PI/2); // Esquerdo
+                const bench13 = this.createModernBench(-13, 15, Math.PI/2); // Esquerdo
 
-                const bench2 = this.createModernBench(15, 0.0, -Math.PI/2); // Direito
-                const bench21 = this.createModernBench(15, -15, -Math.PI/2); // Direito
-                const bench22 = this.createModernBench(15, 15, -Math.PI/2); // Direito
+                const bench2 = this.createModernBench(15, 0, -Math.PI/2); // Direito
+                const bench21 = this.createModernBench(15, -17, -Math.PI/2); // Direito
+                const bench22 = this.createModernBench(15, 17, -Math.PI/2); // Direito
 
                 // Banco central virado para trás
                 const bench3 = this.createModernBench(6.5, -30, Math.PI); 
@@ -473,68 +492,97 @@
 
                 // Colunas do museu
                 this.addMuseumColumns(sceneGraph, roomWidth, roomDepth, wallHeight);
+
+                this.addClassicLamp(sceneGraph, roomWidth, roomDepth, wallHeight);
+                
+                const wallOffset = 1; // margem segura para evitar que fique encostado demais à parede
+                const cornerPositions = [
+                    { x: -roomWidth / 2 + wallOffset, z: -roomDepth / 2 + wallOffset },
+                    { x:  roomWidth / 2 - wallOffset, z: -roomDepth / 2 + wallOffset },
+                    { x: -roomWidth / 2 + wallOffset, z:  roomDepth / 2 - wallOffset },
+                    { x:  roomWidth / 2 - wallOffset, z:  roomDepth / 2 - wallOffset }
+                ];
+
+                cornerPositions.forEach((pos) => {
+                    this.addPlantToCorner(sceneGraph, pos.x, pos.z, wallHeight);
+                });
+
+                this.addBaseboards(sceneGraph, roomWidth, roomDepth, wallHeight);
+
             },
 
-            // BANCO CENTRAL MODERNO
-                createModernBench: function(positionX, positionZ, rotationY = Math.PI/2) {
+            createModernBench: function(positionX, positionZ, rotationY = Math.PI / 2) {
                 const benchGroup = new THREE.Group();
-                
                 const textureLoader = new THREE.TextureLoader();
 
-                // Textura de madeira para o assento
-                const woodTexture = textureLoader.load('Wood092_1K_Color.jpg', (texture) => {
+                // Carregar a textura da pedra/mármore (mesma das colunas)
+                const marbleTexture = textureLoader.load('transferir (16).jpg', (texture) => {
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
-                    texture.repeat.set(9, 1); // Ajuste conforme necessário
+                    texture.repeat.set(5, 1);
+                    texture.encoding = THREE.sRGBEncoding;
+                    texture.anisotropy = 16; // aumenta qualidade da textura
                 });
 
-                const woodMaterial = new THREE.MeshStandardMaterial({
-                    map: woodTexture,
-                    roughness: 0.6,
-                    metalness: 0.1,
+                const marbleMaterial = new THREE.MeshStandardMaterial({
+                    map: marbleTexture,
+                    color: new THREE.Color("#e8d5b5"), // aplica o mesmo tom/bege das colunas
+                    roughness: 0.5,
+                    metalness: 0.2,
                     side: THREE.DoubleSide
                 });
-                
-                const metalMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xFFD700,
-                    metalness: 0.8,
-                    roughness: 0.3
-                });
 
-                const length = 10; // Reduzi o comprimento para caber melhor no espaço
+                const length = 10;
                 const width = 1;
                 const height = 0.7;
                 const legHeight = 1.5;
 
+                // Assento simples (BoxGeometry)
                 const seat = new THREE.Mesh(
                     new THREE.BoxGeometry(length, height, width),
-                    woodMaterial
+                    marbleMaterial
                 );
-                seat.position.y = legHeight + height/2;
+                seat.position.y = legHeight + height / 2;
                 seat.castShadow = true;
+                seat.receiveShadow = true;
                 benchGroup.add(seat);
 
-                const legGeometry = new THREE.BoxGeometry(0.1, legHeight, 0.1);
+                // Pernas cilíndricas do banco
+                const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, legHeight, 16);
                 const legPositions = [
-                    { x: -length/2 + 0.5, z: -width/2 + 0.1 },
-                    { x: length/2 - 0.5, z: -width/2 + 0.1 },
-                    { x: -length/2 + 0.5, z: width/2 - 0.1 },
-                    { x: length/2 - 0.5, z: width/2 - 0.1 }
+                    { x: -length / 2 + 0.5, z: -width / 2 + 0.1 },
+                    { x: length / 2 - 0.5, z: -width / 2 + 0.1 },
+                    { x: -length / 2 + 0.5, z: width / 2 - 0.1 },
+                    { x: length / 2 - 0.5, z: width / 2 - 0.1 }
                 ];
-                
                 legPositions.forEach(pos => {
-                    const leg = new THREE.Mesh(legGeometry, metalMaterial);
-                    leg.position.set(pos.x, legHeight/2, pos.z);
+                    const leg = new THREE.Mesh(legGeometry, marbleMaterial);
+                    leg.position.set(pos.x, legHeight / 2, pos.z);
+                    leg.castShadow = true;
+                    leg.receiveShadow = true;
                     benchGroup.add(leg);
                 });
 
+                // Barra lateral (apoio do assento)
                 const sideBar = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.03, 0.03, length - 1, 8),
-                    metalMaterial
+                    new THREE.CylinderGeometry(0.03, 0.03, length - 1, 16),
+                    marbleMaterial
                 );
-                sideBar.position.set(0, legHeight + 0.02, -width/2 + 0.15);
-                sideBar.rotation.z = Math.PI/2;
+                sideBar.position.set(0, legHeight + 0.02, -width / 2 + 0.15);
+                sideBar.rotation.z = Math.PI / 2;
+                sideBar.castShadow = true;
                 benchGroup.add(sideBar);
+
+                // Apoios para os braços (armrests) simples caixas finas
+                const armRestGeometry = new THREE.BoxGeometry(0.1, 0.5, width);
+                const armRestLeft = new THREE.Mesh(armRestGeometry, marbleMaterial);
+                armRestLeft.position.set(-length / 2 + 0.2, legHeight + 0.7, 0);
+                armRestLeft.castShadow = true;
+                benchGroup.add(armRestLeft);
+
+                const armRestRight = armRestLeft.clone();
+                armRestRight.position.x = length / 2 - 0.2;
+                benchGroup.add(armRestRight);
 
                 benchGroup.position.set(positionX, 0, positionZ);
                 benchGroup.rotation.y = rotationY;
@@ -542,6 +590,208 @@
                 return benchGroup;
             },
 
+            addClassicLamp: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
+                const textureLoader = new THREE.TextureLoader();
+                const marbleTexture = textureLoader.load('transferir (16).jpg');
+
+                const marbleMaterial = new THREE.MeshStandardMaterial({
+                    map: marbleTexture,
+                    color: new THREE.Color("#e8d5b5"),
+                    roughness: 0.5,
+                    metalness: 0.2
+                });
+
+                // Poste pendurado
+                const poleHeight = 3;
+                const pole = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, poleHeight, 24),
+                    marbleMaterial
+                );
+                pole.position.y = wallHeight - (poleHeight / 2);
+
+                // Base decorativa no topo do poste
+                const topBase = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.5, 0.6, 0.3, 32),
+                    marbleMaterial
+                );
+                topBase.position.y = wallHeight - poleHeight - 0.15;
+
+                const arms = new THREE.Group();
+                const numArms = 4;
+                const armLength = 2.5;
+                const armRadius = 0.08;
+                const lampRadius = 0.7;
+                const armY = wallHeight - poleHeight - 0.4;
+
+                for (let i = 0; i < numArms; i++) {
+                    const angle = i * (Math.PI / 2);
+                    const dirX = Math.cos(angle);
+                    const dirZ = Math.sin(angle);
+
+                    // Braço
+                    const arm = new THREE.Mesh(
+                        new THREE.CylinderGeometry(armRadius, armRadius, armLength, 16),
+                        marbleMaterial
+                    );
+
+                    arm.position.set(
+                        dirX * (armLength / 2),
+                        armY,
+                        dirZ * (armLength / 2)
+                    );
+
+                    // Rodar para apontar para fora
+                    arm.rotation.y = -angle;
+                    arm.rotation.z = Math.PI / 2;
+
+                    // Esfera decorativa no fim do braço
+                    const endCap = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.15, 16, 16),
+                        marbleMaterial
+                    );
+                    endCap.position.set(
+                        dirX * armLength,
+                        armY,
+                        dirZ * armLength
+                    );
+
+                    // Lâmpada grande
+                    const lamp = new THREE.Mesh(
+                        new THREE.SphereGeometry(lampRadius, 32, 32),
+                        new THREE.MeshStandardMaterial({
+                            color: 0xffffcc,
+                            emissive: 0xffffaa,
+                            emissiveIntensity: 0.6,
+                            roughness: 0.2,
+                            metalness: 0.1
+                        })
+                    );
+                    lamp.position.set(
+                        dirX * armLength,
+                        armY - lampRadius - 0.1,
+                        dirZ * armLength
+                    );
+
+                    // Luz
+                    const pointLight = new THREE.PointLight(0xfff2cc, 1.2, 15);
+                    pointLight.position.copy(lamp.position);
+                    pointLight.castShadow = true;
+
+                    arms.add(arm);
+                    arms.add(endCap);
+                    arms.add(lamp);
+                    arms.add(pointLight);
+                }
+
+                const lampGroup = new THREE.Group();
+                lampGroup.add(pole);
+                lampGroup.add(topBase);
+                lampGroup.add(arms);
+
+                lampGroup.position.set(0, 0, 0);
+                sceneGraph.add(lampGroup);
+            },
+
+            addPlantToCorner: function(sceneGraph, x, z, wallHeight) {
+                const potHeight = 1.6;
+                const potRadius = 0.9;
+
+                // Vaso robusto
+                const pot = new THREE.Mesh(
+                    new THREE.CylinderGeometry(potRadius * 0.6, potRadius, potHeight, 32),
+                    new THREE.MeshStandardMaterial({ color: 0x8b5a2b }) // castanho terra
+                );
+                pot.position.y = potHeight / 2;
+
+                // Tronco central (opcional)
+                const stemHeight = wallHeight * 0.25;
+                const stem = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.12, 0.12, stemHeight, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x3e2c1c }) // castanho escuro
+                );
+                stem.position.y = potHeight + stemHeight / 2;
+
+                // Grupo de folhas finas (cones altos e estreitos)
+                const leavesMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+                const leafGroup = new THREE.Group();
+                const numLeaves = 6;
+                const maxLeafHeight = wallHeight * 0.6;
+
+                for (let i = 0; i < numLeaves; i++) {
+                    const leaf = new THREE.Mesh(
+                        new THREE.ConeGeometry(0.15, maxLeafHeight * (0.8 + Math.random() * 0.2), 12),
+                        leavesMaterial
+                    );
+
+                    const angle = (i / numLeaves) * Math.PI * 2;
+                    const radius = 0.5;
+                    leaf.position.set(
+                        Math.cos(angle) * radius,
+                        potHeight + stemHeight,
+                        Math.sin(angle) * radius
+                    );
+                    leaf.rotation.x = Math.random() * 0.2 - 0.1;
+                    leaf.rotation.z = Math.random() * 0.2 - 0.1;
+                    leafGroup.add(leaf);
+                }
+
+                // Agrupar tudo
+                const plantGroup = new THREE.Group();
+                plantGroup.add(pot);
+                plantGroup.add(stem);
+                plantGroup.add(leafGroup);
+
+                // Posicionar no canto
+                plantGroup.position.set(x, 0, z);
+
+                sceneGraph.add(plantGroup);
+            },
+
+            addBaseboards: function(sceneGraph, roomWidth, roomDepth) {
+                const baseboardHeight = 0.3;
+                const baseboardDepth = 0.2;
+
+                const textureLoader = new THREE.TextureLoader();
+                const marbleTexture = textureLoader.load('transferir (16).jpg'); // usar textura do mármore
+
+                const baseboardMaterial = new THREE.MeshStandardMaterial({
+                    map: marbleTexture,
+                    color: new THREE.Color("#e8d5b5"),
+                    roughness: 0.5,
+                    metalness: 0.2
+                });
+
+                // Criar as 4 partes do rodapé - um contorno em "U"
+                
+                // Parede frontal e traseira (largura do museu)
+                const frontBoard = new THREE.Mesh(
+                    new THREE.BoxGeometry(roomWidth, baseboardHeight, baseboardDepth),
+                    baseboardMaterial
+                );
+                frontBoard.position.set(0, baseboardHeight / 2, -roomDepth / 2 + baseboardDepth / 2);
+                
+                const backBoard = frontBoard.clone();
+                backBoard.position.set(0, baseboardHeight / 2, roomDepth / 2 - baseboardDepth / 2);
+
+                // Parede esquerda e direita (profundidade do museu)
+                const sideBoard = new THREE.Mesh(
+                    new THREE.BoxGeometry(baseboardDepth, baseboardHeight, roomDepth),
+                    baseboardMaterial
+                );
+                sideBoard.position.set(-roomWidth / 2 + baseboardDepth / 2, baseboardHeight / 2, 0);
+                
+                const otherSideBoard = sideBoard.clone();
+                otherSideBoard.position.set(roomWidth / 2 - baseboardDepth / 2, baseboardHeight / 2, 0);
+
+                // Adicionar tudo ao grupo e depois à cena
+                const baseboardsGroup = new THREE.Group();
+                baseboardsGroup.add(frontBoard);
+                baseboardsGroup.add(backBoard);
+                baseboardsGroup.add(sideBoard);
+                baseboardsGroup.add(otherSideBoard);
+
+                sceneGraph.add(baseboardsGroup);
+            },
 
             addAvatar: function(sceneGraph, avatarType) {
                 // Se já existe um avatar na cena, removemos antes
@@ -581,9 +831,6 @@
                     sceneElements.avatar = avatarModel;
                     sceneElements.originalAvatarPosition = avatarModel.position.clone();
                     sceneElements.originalAvatarRotationY = avatarModel.rotation.y;
-
-                    // Se você quiser, pode disparar uma função aqui para ativar animações do GLTF
-                    // ex: mixer e actions para animação, caso seu gltf tenha animações
                 },
                 undefined,
                 (error) => {
@@ -660,39 +907,49 @@
                 framePositions.forEach((pos) => {
                     const frameGroup = new THREE.Group();
 
-                    // Criar moldura
-                    const front = new THREE.Mesh(
-                        new THREE.BoxGeometry(frameWidth, frameHeight, frameDepth/3),
-                        frameMaterial
-                    );
-                    front.position.z = frameDepth/3;
-                    frameGroup.add(front);
+                    const marbleTexture = textureLoader.load("transferir (16).jpg");
+                    const frameMaterial = new THREE.MeshStandardMaterial({
+                        map: marbleTexture,
+                        color: new THREE.Color("#e8d5b5"),
+                        roughness: 0.4,
+                        metalness: 0.2
+                        
+                    });
 
+                    // Moldura com bordas mais elegantes
+                    const bevel = 0.15;
                     const sideDepth = frameDepth * 0.7;
 
-                    const left = new THREE.Mesh(
-                        new THREE.BoxGeometry(frameDepth/2, frameHeight, sideDepth),
+                    const front = new THREE.Mesh(
+                        new THREE.BoxGeometry(frameWidth, frameHeight, frameDepth / 3),
                         frameMaterial
                     );
-                    left.position.set(-frameWidth/2 + frameDepth/4, 0, sideDepth/2);
+                    front.position.z = frameDepth / 3;
+                    frameGroup.add(front);
+
+                    const left = new THREE.Mesh(
+                        new THREE.BoxGeometry(bevel, frameHeight, sideDepth),
+                        frameMaterial
+                    );
+                    left.position.set(-frameWidth / 2 + bevel / 2, 0, sideDepth / 2);
                     frameGroup.add(left);
 
                     const right = left.clone();
-                    right.position.set(frameWidth/2 - frameDepth/4, 0, sideDepth/2);
+                    right.position.set(frameWidth / 2 - bevel / 2, 0, sideDepth / 2);
                     frameGroup.add(right);
 
                     const top = new THREE.Mesh(
-                        new THREE.BoxGeometry(frameWidth + frameDepth/2, frameDepth/2, sideDepth),
+                        new THREE.BoxGeometry(frameWidth + bevel, bevel, sideDepth),
                         frameMaterial
                     );
-                    top.position.set(0, frameHeight/2 - frameDepth/4, sideDepth/2);
+                    top.position.set(0, frameHeight / 2 - bevel / 2, sideDepth / 2);
                     frameGroup.add(top);
 
                     const bottom = top.clone();
-                    bottom.position.set(0, -frameHeight/2 + frameDepth/4, sideDepth/2);
+                    bottom.position.set(0, -frameHeight / 2 + bevel / 2, sideDepth / 2);
                     frameGroup.add(bottom);
 
-                    // Posicionar grupo
+                    // Posicionar moldura
                     frameGroup.position.set(pos.x, pos.y, pos.z);
                     frameGroup.rotation.y = pos.rotY;
                     sceneGraph.add(frameGroup);
@@ -706,25 +963,19 @@
 
                             const mockupMaterial = new THREE.MeshStandardMaterial({
                                 map: texture,
-                                color: 0xffffff,                      // mantém as cores vivas
+                                color: 0xffffff,
                                 roughness: 0.0,
                                 metalness: 0.0,
-                                side: THREE.DoubleSide,
-                                emissive: new THREE.Color(0x444444), // leve brilho "próprio"
+                                emissive: new THREE.Color(0x555555),
                                 emissiveIntensity: 0.5,
-                                toneMapped: true
+                                side: THREE.DoubleSide
                             });
-
-                            if (pos.rotY === 0 || pos.rotY === Math.PI || pos.rotY === Math.PI/2 || pos.rotY === -Math.PI/2) {
-                                mockupMaterial.color = new THREE.Color(2.5, 2.5, 2.5); 
-                            }
 
                             const mockup = new THREE.Mesh(
                                 new THREE.PlaneGeometry(frameWidth * 0.9, frameHeight * 0.9),
                                 mockupMaterial
                             );
 
-                            // Posicionar mockup um pouco na frente da moldura
                             mockup.position.copy(frameGroup.position);
                             const forward = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(0, pos.rotY, 0));
                             mockup.position.add(forward.multiplyScalar(frameDepth / 2 + 0.05));
@@ -735,60 +986,65 @@
                         },
                         undefined,
                         (error) => {
-                            console.error('Erro ao carregar textura:', imageUrl, error);
-
-                            const fallbackMockup = new THREE.Mesh(
-                                new THREE.PlaneGeometry(frameWidth * 0.9, frameHeight * 0.9),
-                                new THREE.MeshStandardMaterial({
-                                    color: 0xff00ff,
-                                    side: THREE.DoubleSide
-                                })
-                            );
-
-                            fallbackMockup.position.copy(frameGroup.position);
-                            const forward = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(0, pos.rotY, 0));
-                            fallbackMockup.position.add(forward.multiplyScalar(frameDepth / 2 + 0.05));
-                            fallbackMockup.rotation.y = pos.rotY;
-
-                            sceneGraph.add(fallbackMockup);
+                            console.error("Erro ao carregar textura:", imageUrl, error);
                         }
                     );
                 });
             },
 
-
             addMuseumColumns: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
                 const textureLoader = new THREE.TextureLoader();
-    
+
                 // Textura de mármore com alta qualidade
                 const marbleTexture = textureLoader.load('transferir (16).jpg', (texture) => {
                     texture.encoding = THREE.sRGBEncoding;
                     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
-                    texture.repeat.set(10, wallHeight/3); // Ajuste para a altura da coluna
+                    texture.repeat.set(1, wallHeight / 3); // menos repetição para evitar padrão óbvio
                     texture.minFilter = THREE.LinearMipmapLinearFilter;
                 });
-                
+
                 const columnMaterial = new THREE.MeshStandardMaterial({
+                    map: marbleTexture,
                     color: new THREE.Color("#e8d5b5"),
                     roughness: 0.5,
                     metalness: 0.2
                 });
-                
+
                 const columnGeometry = new THREE.CylinderGeometry(0.8, 0.8, wallHeight, 32);
-                
+
+                const baseGeometry = new THREE.CylinderGeometry(1, 1, 0.3, 32);
+                const capitelGeometry = new THREE.CylinderGeometry(1.1, 1.1, 0.3, 32);
+
                 const columns = [
-                    { x: -roomWidth/3, z: -roomDepth/3 },
-                    { x: roomWidth/3, z: -roomDepth/3 },
-                    { x: -roomWidth/3, z: roomDepth/3 },
-                    { x: roomWidth/3, z: roomDepth/3 }
+                    { x: -roomWidth / 3, z: -roomDepth / 3 },
+                    { x: roomWidth / 3, z: -roomDepth / 3 },
+                    { x: -roomWidth / 3, z: roomDepth / 3 },
+                    { x: roomWidth / 3, z: roomDepth / 3 }
                 ];
-                
+
                 columns.forEach(pos => {
+                    // Base da coluna
+                    const base = new THREE.Mesh(baseGeometry, columnMaterial);
+                    base.position.set(pos.x, 0.15, pos.z);
+                    base.castShadow = true;
+                    base.receiveShadow = true;
+                    sceneGraph.add(base);
+
+                    // Coluna principal
                     const column = new THREE.Mesh(columnGeometry, columnMaterial);
-                    column.position.set(pos.x, wallHeight/2, pos.z);
+                    column.position.set(pos.x, wallHeight / 2 + 0.3, pos.z);
+                    column.castShadow = true;
+                    column.receiveShadow = true;
                     sceneGraph.add(column);
+
+                    // Capitel da coluna
+                    const capitel = new THREE.Mesh(capitelGeometry, columnMaterial);
+                    capitel.position.set(pos.x, wallHeight + 0.3, pos.z);
+                    capitel.castShadow = true;
+                    capitel.receiveShadow = true;
+                    sceneGraph.add(capitel);
                 });
             },
         };
