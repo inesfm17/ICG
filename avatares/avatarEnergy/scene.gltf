@@ -487,9 +487,9 @@
       "name": "material",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
+          0.8,
           0.4,
-          0.26,
-          0.13,
+          0.0,
           1.0
         ],
         "metallicFactor": 0.0,
@@ -511,9 +511,9 @@
       "name": "BlackS",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          1.0,
-          0.5,
-          0.7,
+          0.75,
+          0.75,
+          0.75,
           1.0
         ],
         "metallicFactor": 0.0,
@@ -536,9 +536,9 @@
       "name": "BlueEye",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
+          0.8,
           0.4,
-          0.26,
-          0.13,
+          0.0,
           1.0
         ],
         "metallicFactor": 0,
@@ -561,9 +561,9 @@
       "name": "Black",
       "pbrMetallicRoughness": {
         "baseColorFactor": [
-          1.0,
-          0.5,
-          0.7,
+          0.75,
+          0.75,
+          0.75,
           1.0
         ],
         "roughnessFactor": 0.0

@@ -52,7 +52,7 @@
         }
         /* Estilo base para todos os botões do wallSelector */
         .wall-btn {
-            padding: 8px 12px;
+            padding: 10px 25px;
             border: 1px solid white;
             color: white;
             font-family: Arial, sans-serif;
@@ -65,29 +65,31 @@
 
         /* Cores específicas */
         .wall-btn.blue {
-            background-color: #a2c5f5;
-            border-color: #a2c5f5;
-            
+            background-color: #c8c5c5;
+            border-color: #c8c5c5;
+            color: #e5841d;
+            border: 2px solid #e5841d;
         }
         .wall-btn.blue:hover {
-            background-color: #b8d4f9;
+            background-color: #d9d7d7;
         }
         .wall-btn.pink {
             background-color: #f5c4cb;
             border-color: #f5c4cb;
             color: #906749;
-            border: 1px solid #906749;
+            border: 2px solid #906749;
         }
         .wall-btn.pink:hover {
             background-color: #f7d4da;
         }
         .wall-btn.green {
-            background-color: #b3e6c9;
-            border-color: #b3e6c9;
-            color: black;
+            background-color: #000ff0;
+            border-color: #000ff0;
+            color: #eef22d;
+            border: 2px solid #eef22d;
         }
         .wall-btn.green:hover {
-            background-color: #c6edd6;
+            background-color: #334fff;
         }
 
     </style>
@@ -97,9 +99,9 @@
     <div id="info">Museu Virtual de Moda • Use o mouse para navegar</div>
     <button id="zoomOutBtn">Voltar à vista geral</button>
     <div id="wallSelector">
-        <button class="wall-btn blue" onclick="goToWall('blue')">Serenidade</button>
         <button class="wall-btn pink" onclick="goToWall('pink')">Balance</button>
-        <button class="wall-btn green" onclick="goToWall('green')">Ressurgir</button>
+        <button class="wall-btn blue" onclick="goToWall('blue')">Energy</button>
+        <button class="wall-btn green" onclick="goToWall('green')">Stability</button>
     </div>
     <script type="module">
         import * as THREE from "three";
@@ -130,7 +132,7 @@
                 const height = window.innerHeight;
                 const camera = new THREE.PerspectiveCamera(80, width / height, 1, 100);
                 sceneElements.camera = camera;
-                camera.position.set(10, 8.5, 30);
+                camera.position.set(10, 11, 37);
                 
                 sceneElements.originalCameraPosition = camera.position.clone();
                 sceneElements.originalControlsTarget = new THREE.Vector3(0, 0, 0);
@@ -155,7 +157,7 @@
                 sceneElements.controls = controls;
 
                 // ILUMINAÇÃO FIXA E ESTÁVEL
-                const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
                 scene.add(ambientLight);
 
                 
@@ -344,7 +346,7 @@
 
                 const wallMaterial = new THREE.MeshStandardMaterial({
                     map: wallTexture,
-                    roughness: 0.0,
+                    roughness: 0.5,
                     metalness: 0.0
                 });
 
@@ -422,8 +424,8 @@
                     
                     const doorMaterial = new THREE.MeshStandardMaterial({
                         color: new THREE.Color ("#f5e1ce"),
-                        roughness: 0.4,
-                        metalness: 0.2
+                        roughness: 0.0,
+                        metalness: 0.0
                     });
 
                     const door = new THREE.Mesh(
@@ -557,10 +559,10 @@
                         avatarURL = 'avatares/avatarBalance/scene.gltf';  // substitua pelo caminho real
                         break;
                     case '2':
-                        avatarURL = 'avatares/avatarBalance/scene.gltf';
+                        avatarURL = 'avatares/avatarEnergy/scene.gltf';
                         break;
                     case '3':
-                        avatarURL = 'avatares/avatarBalance/scene.gltf';
+                        avatarURL = 'avatares/avatarStability/scene.gltf';
                         break;
                 }
 
@@ -570,7 +572,7 @@
                     // Ajustar escala, posição e rotação para o padrão
                     avatarModel.scale.set(1.0, 1.0, 1.0);
                     avatarModel.position.set(5, 5, 22);
-                    avatarModel.rotation.y = Math.PI ; // Posição padrão do avatar
+                    avatarModel.rotation.y = 0.5; // Posição padrão do avatar
 
                     // Adicionar o modelo na cena
                     sceneGraph.add(avatarModel);
@@ -608,12 +610,10 @@
             },
 
             addPlaceholderFrames: function(sceneGraph, roomWidth, roomDepth, wallHeight) {
-                const goldFrameMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xFFD700,
-                    metalness: 1.0,
-                    roughness: 0.2,
-                    emissive: 0x886600, // mais vibrante
-                    emissiveIntensity: 0.5
+                const frameMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xffffff, 
+                    metalness: 0.1, 
+                    roughness: 0.4 
                 });
 
                 const frameWidth = 6;
@@ -622,11 +622,19 @@
                 const frameOffset = 0.2;
 
                 const mockupImages = [
-                    'mockup1.png',
-                    'mockup2.png',
-                    'mockup3.png',
-                    'mockup4.png',
-                    'mockup5.png'
+                    'mockups/mockup1.png',
+                    'mockups/mockup2.png',
+                    'mockups/mockup3.png',
+                    'mockups/mockup4.png',
+                    'mockups/mockup5.png',
+                    'mockups/mockup6.png',
+                    'mockups/mockup7.png',
+                    'mockups/mockup8.png',
+                    'mockups/mockup9.png',
+                    'mockups/mockup10.png',
+                    'mockups/mockup11.png',
+                    'mockups/mockup12.png',
+                    'mockups/mockup13.png',
                 ];
 
                 const framePositions = [
@@ -635,16 +643,16 @@
                     { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: 7,   rotY: Math.PI/2, mockupIndex: 3 },
                     { x: -roomWidth/2 + frameOffset, y: wallHeight/2, z: 20,  rotY: Math.PI/2, mockupIndex: 4 },
 
-                    { x: -20, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
-                    { x: -10, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
-                    { x: 0,   y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
-                    { x: 10,  y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
-                    { x: 20,  y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 0 },
+                   { x: -15, y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 9 },
+                   { x: -5,  y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 10 },
+                   { x: 5,   y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 11 },
+                   { x: 15,  y: wallHeight/2, z: -roomDepth/2 + frameOffset, rotY: 0, mockupIndex: 12 },
 
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -20, rotY: -Math.PI/2, mockupIndex: 0 },
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -7,  rotY: -Math.PI/2, mockupIndex: 0 },
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 7,   rotY: -Math.PI/2, mockupIndex: 0 },
-                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 20,  rotY: -Math.PI/2, mockupIndex: 0 }
+
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -20, rotY: -Math.PI/2, mockupIndex: 5 },
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: -7,  rotY: -Math.PI/2, mockupIndex: 6 },
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 7,   rotY: -Math.PI/2, mockupIndex: 7 },
+                    { x: roomWidth/2 - frameOffset, y: wallHeight/2, z: 20,  rotY: -Math.PI/2, mockupIndex: 8 }
                 ];
 
                 const textureLoader = new THREE.TextureLoader();
@@ -655,7 +663,7 @@
                     // Criar moldura
                     const front = new THREE.Mesh(
                         new THREE.BoxGeometry(frameWidth, frameHeight, frameDepth/3),
-                        goldFrameMaterial
+                        frameMaterial
                     );
                     front.position.z = frameDepth/3;
                     frameGroup.add(front);
@@ -664,7 +672,7 @@
 
                     const left = new THREE.Mesh(
                         new THREE.BoxGeometry(frameDepth/2, frameHeight, sideDepth),
-                        goldFrameMaterial
+                        frameMaterial
                     );
                     left.position.set(-frameWidth/2 + frameDepth/4, 0, sideDepth/2);
                     frameGroup.add(left);
@@ -675,7 +683,7 @@
 
                     const top = new THREE.Mesh(
                         new THREE.BoxGeometry(frameWidth + frameDepth/2, frameDepth/2, sideDepth),
-                        goldFrameMaterial
+                        frameMaterial
                     );
                     top.position.set(0, frameHeight/2 - frameDepth/4, sideDepth/2);
                     frameGroup.add(top);
@@ -698,19 +706,19 @@
 
                             const mockupMaterial = new THREE.MeshStandardMaterial({
                                 map: texture,
-                                roughness: 0.3,
+                                color: 0xffffff,                      // mantém as cores vivas
+                                roughness: 0.0,
                                 metalness: 0.0,
                                 side: THREE.DoubleSide,
-                                emissive: 0x000000, // sem brilho
-                                emissiveIntensity: 0.0,
-                                toneMapped: false // mantêm as cores vivas
+                                emissive: new THREE.Color(0x444444), // leve brilho "próprio"
+                                emissiveIntensity: 0.5,
+                                toneMapped: true
                             });
 
-                            if (pos.rotY === Math.PI/2) {
-                                mockupMaterial.color = new THREE.Color(1.8, 1.8, 1.8); // muito claro, mais que branco
-                                mockupMaterial.emissive = new THREE.Color(0xaaaaaa);   // um brilho cinza claro
-                                mockupMaterial.emissiveIntensity = 0.2;                // intensificar brilho
+                            if (pos.rotY === 0 || pos.rotY === Math.PI || pos.rotY === Math.PI/2 || pos.rotY === -Math.PI/2) {
+                                mockupMaterial.color = new THREE.Color(2.5, 2.5, 2.5); 
                             }
+
                             const mockup = new THREE.Mesh(
                                 new THREE.PlaneGeometry(frameWidth * 0.9, frameHeight * 0.9),
                                 mockupMaterial
@@ -785,7 +793,9 @@
             },
         };
 
+            let lastSelectedWall = null;
             function goToWall(color) {
+
             let camPosition, camTarget, avatarPosition, avatarRotationY;
             switch(color) {
                 case 'blue':
@@ -793,18 +803,21 @@
                     camTarget = new THREE.Vector3(0, 10, -40);
                     avatarPosition = new THREE.Vector3(0, 1.5, -28);  // y=1.5 para o avatar ficar no chão
                     avatarRotationY = Math.PI;  // 180 em radianos
+                    lastSelectedWall = "Energy";
                     break;
                 case 'pink':
                     camPosition = new THREE.Vector3(6, 7, 0);
                     camTarget = new THREE.Vector3(0, 7, 0);
-                    avatarPosition = new THREE.Vector3(-22, 0, 0);
-                    avatarRotationY = Math.PI / 2;
+                    avatarPosition = new THREE.Vector3(-16, 10, 0);
+                    avatarRotationY =  Math.PI+1.5;// Posição padrão do avatar
+                    lastSelectedWall = "Balance";
                     break;
                 case 'green':
                     camPosition = new THREE.Vector3(-10, 7, 0);
                     camTarget = new THREE.Vector3(70, 7, 0);
-                    avatarPosition = new THREE.Vector3(22, 0, 0);
-                    avatarRotationY = -Math.PI / 2;
+                    avatarPosition = new THREE.Vector3(16, 10, 0);
+                    avatarRotationY = Math.PI - 1.5;
+                    lastSelectedWall = "Stability";
                     break;
                 case 'zoomOutBtn':
                     camPosition = sceneElements.originalCameraPosition;
@@ -873,21 +886,11 @@
             direction.normalize();
             avatar.position.addScaledVector(direction, speed);
 
-            function updateCameraFollow() {
-                const avatar = sceneElements.avatar;
-                const camera = sceneElements.camera;
-                const controls = sceneElements.controls;
-
-                if (!avatar || !camera || !controls) return;
-
-                const cameraOffset = new THREE.Vector3(0, 5, -10); // vista ligeiramente elevada e atrás
-            }
             function animate() {
                 requestAnimationFrame(animate);
                 TWEEN.update();
-                updateCameraFollow();
+                avatarModel.lookAt(camera.position);
                 sceneElements.controls.update();
-                sceneElements.renderer.render(sceneElements.sceneGraph, sceneElements.camera);
             }
             animate();
         });

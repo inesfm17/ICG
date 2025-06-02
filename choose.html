@@ -136,15 +136,15 @@
             <div class="avatar-options">
                 <div class="avatar-option" data-avatar="1">
                     <div class="avatar-preview" id="avatar1"></div>
-                    <p>Explorador</p>
+                    <p>Balance</p>
                 </div>
                 <div class="avatar-option" data-avatar="2">
                     <div class="avatar-preview" id="avatar2"></div>
-                    <p>Balance</p>
+                    <p>Energy</p>
                 </div>
                 <div class="avatar-option" data-avatar="3">
                     <div class="avatar-preview" id="avatar3"></div>
-                    <p>Historiador</p>
+                    <p>Stability</p>
                 </div>
             </div>
             
@@ -237,8 +237,8 @@
         function setupAvatarSelection() {
             // URLs dos modelos .glb - substitua pelos seus URLs corretos dos modelos
             avatars.push(createAvatar('avatares/avatarBalance/scene.gltf', 'avatar1'));  // Explorador
-            avatars.push(createAvatar('avatares/avatarBalance/scene.gltf', 'avatar2'));    // Balance
-            avatars.push(createAvatar('avatares/avatarBalance/scene.gltf', 'avatar3')); // Historiador
+            avatars.push(createAvatar('avatares/avatarEnergy/scene.gltf', 'avatar2'));    // Balance
+            avatars.push(createAvatar('avatares/avatarStability/scene.gltf', 'avatar3')); // Historiador
             
             // Seleção de avatar
             document.querySelectorAll('.avatar-option').forEach(option => {
