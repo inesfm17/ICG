@@ -108,6 +108,8 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import TWEEN from 'https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.5.0/dist/tween.esm.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
         // Obter o avatar selecionado da URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -459,6 +461,54 @@
                     sceneGraph.add(door);
                 });
 
+                function addWallTitles(sceneGraph, roomWidth, roomDepth, wallHeight) {
+                    const fontLoader = new FontLoader();
+                    fontLoader.load('Pacifico_Regular.json', function (font) {
+                        // Configuração comum para todos os textos
+                        const textSettings = {
+                            font: font,
+                            size: 1.5,
+                            height: 0.2,
+                            curveSegments: 12,
+                            bevelEnabled: true,
+                            bevelThickness: 0.03,
+                            bevelSize: 0.02,
+                            bevelOffset: 0,
+                            bevelSegments: 5
+                        };
+
+                        const textMaterial = new THREE.MeshStandardMaterial({ 
+                            color: 0xd7be9e,
+                            metalness: 0.4,
+                            roughness: 0.4,
+                            emissive: 0x000000,
+                            emissiveIntensity: 0.5
+                        });
+
+                        // Parede Esquerda (Balance)
+                        const balanceText = new TextGeometry("Balance", textSettings);
+                        const balanceMesh = new THREE.Mesh(balanceText, textMaterial);
+                        balanceMesh.position.set(-roomWidth/2 + 0.5, wallHeight/2 + 5.0, 3.5);
+                        balanceMesh.rotation.y = Math.PI/2;
+                        sceneGraph.add(balanceMesh);
+
+                        // Parede Direita (Stability)
+                        const energyText = new TextGeometry("Stability", textSettings);
+                        const energyMesh = new THREE.Mesh(energyText, textMaterial);
+                        energyMesh.position.set(roomWidth/2 - 0.5, wallHeight/2 + 5.0, -3.9);
+                        energyMesh.rotation.y = -Math.PI/2;
+                        sceneGraph.add(energyMesh);
+
+                        // Parede Fundo (Energy)
+                        // Parede Fundo (Energy) - Versão Corrigida
+                        const stabilityText = new TextGeometry("Energy", textSettings);
+                        const stabilityMesh = new THREE.Mesh(stabilityText, textMaterial);
+                        stabilityMesh.position.set(-3.9, wallHeight * 0.87, -roomDepth/2 + 0.5);
+                        stabilityMesh.rotation.y = 0; // Removida a rotação PI que causava espelhamento
+                        sceneGraph.add(stabilityMesh);
+                    });
+                }
+
                 // Bancos laterais
                 const bench1 = this.createModernBench(-13, -15, Math.PI/2); // Esquerdo
                 const bench12 = this.createModernBench(-13, 0, Math.PI/2); // Esquerdo
@@ -508,7 +558,8 @@
                 });
 
                 this.addBaseboards(sceneGraph, roomWidth, roomDepth, wallHeight);
-
+                addWallTitles(sceneGraph, roomWidth, roomDepth, wallHeight);
+                
             },
 
             createModernBench: function(positionX, positionZ, rotationY = Math.PI / 2) {
